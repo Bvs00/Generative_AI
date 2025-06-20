@@ -65,13 +65,14 @@ class AutoEncoder(nn.Module):
         model.append(nn.Sigmoid())
         return model
     
-    def generate_sample(self, y):
+    def generate_sample(self, y, path):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
             image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1))
         
         plt.figure()
-        plt.imshow(image_generated[0][0].cpu(), cmap='gray')
+        plt.imshow(image_generated[0].cpu().permute(1,2,0))     # CxHxW -> HxWxC
+        plt.axis('off')
         label_str = '_'.join(str(int(v)) for v in y.tolist())
-        plt.savefig(f"Image_Generated/CVAE_{label_str}")
+        plt.savefig(f"{path}_{label_str}")

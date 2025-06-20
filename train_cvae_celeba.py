@@ -30,7 +30,6 @@ def loss_function(reconstructed, original, mu, log_sigma):
 
 def training_epoch(model, criterion, optimizer, dataloader):
     start_epoch = 0
-    average_loss = 0.0
     list_loss_train = []
     
     if args.checkpoint and os.path.exists(f"{args.name_model}_checkpoint.pth"):
@@ -44,8 +43,10 @@ def training_epoch(model, criterion, optimizer, dataloader):
     
     for epoch in range(start_epoch, args.num_epochs, 1):
         model.train()
+        average_loss = 0.0
 
-        for x_batch, label_batch in tqdm(dataloader, desc=f"Epoch {epoch+1}/{args.num_epochs}", dynamic_ncols=True):
+        # for x_batch, label_batch in tqdm(dataloader, desc=f"Epoch {epoch+1}/{args.num_epochs}", dynamic_ncols=True):
+        for x_batch, label_batch in dataloader:
             optimizer.zero_grad()
             x_batch = x_batch.to(args.device)
             label_batch = label_batch.to(args.device)
@@ -58,7 +59,7 @@ def training_epoch(model, criterion, optimizer, dataloader):
             optimizer.step()
             
             average_loss += loss
-        print(f"Epoch {epoch+1} completed. Average loss = {average_loss/len(dataloader)}")
+        print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*1000)}")
         list_loss_train.append(average_loss/len(dataloader))
         
         checkpoint = {
@@ -82,10 +83,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_epochs', type=int, default=250)
     parser.add_argument('--latent_size', type=int, default=32)
-    parser.add_argument('--name_model', type=str, default="VAE")
+    parser.add_argument('--name_model', type=str, default="Results_VAE_CelebA/VAE")
     parser.add_argument('--beta', type=float, default=1.0)
+    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('-checkpoint', action='store_true')
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
+    
+    saved_path = args.name_model.split('/')[:-1]
+    saved_path = '/'.join(saved_path)
+    if not os.path.exists(saved_path):
+        os.makedirs(saved_path)
     
     args.name_model = f"{args.name_model}_{args.latent_size}"
     print(args.device)
@@ -104,10 +112,10 @@ if __name__ == '__main__':
     
     training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
     
-    model = AutoEncoder()
+    model = AutoEncoder(args=args)
     model=model.to(args.device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     
     training_epoch(model, loss_function, optimizer, training_loader)
     
