@@ -11,86 +11,11 @@ import argparse
 from CelebA import CelebADataset
 import random
 import numpy as np
-
-LATENT_SIZE = 32
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-
-class AutoEncoder(nn.Module):
-    "Assumes that the input images are 64x64"
-    def __init__(self, args):
-        super().__init__()
-        self.latent_size=args.latent_size
-        self.encoder=self.build_encoder(self.latent_size)
-        self.decoder=self.build_decoder(self.latent_size)
- 
-    def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
-        mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
-        log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
-        y=self.decoder(torch.cat([z,y], dim=1))
-        return y, mu, log_sigma
- 
-    def encode_mu(self, x):
-        out=self.encoder(x)
-        mu=out[:, :self.latent_size]
-        return mu
- 
-    def build_encoder(self, latent_size):
-        model=nn.Sequential()
-        prev=3 + 3      # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
-        size=64    # size identifica la dimensione dell'immagine di input (celebA è 64)
-        for k in [32, 64, 128, 128]:
-            model.append(nn.Conv2d(prev, k, 3, padding='same'))
-            model.append(nn.ReLU())
-            model.append(nn.Conv2d(k, k, 3, stride=2, padding=1))
-            model.append(nn.ReLU())
-            prev=k
-            size=size//2    # al secondo Conv2D viene dimezzata la dimensione di size
-        model.append(nn.Flatten())
-        features=k*size*size    # numero di features a valle del flatten
-        model.append(nn.Linear(features, 2*latent_size))
-        # assert size==8
-        # assert k==128
-        return model
- 
-    def build_decoder(self, latent_size):
-        model=nn.Sequential()
-        size=4
-        prev=128
-        model.append(nn.Linear(latent_size + 3, prev*size*size))
-        model.append(nn.ReLU())
-        model.append(nn.Unflatten(1, (prev, size, size)))
-        for k in [128, 128, 64, 32]:
-            model.append(nn.Conv2d(prev, k, 3, padding='same'))
-            model.append(nn.ReLU())
-            model.append(nn.ConvTranspose2d(k, k, 3, stride=2, padding=1,
-                                            output_padding=1))
-            model.append(nn.ReLU())
-            prev=k
-            size=size*2
-        # assert size==128
-        # assert k==32
-        model.append(nn.Conv2d(k, 3, 3, padding='same'))
-        model.append(nn.Sigmoid())
-        return model
-    
-    def generate_sample(self, y):
-        self.eval()
-        z = torch.randn(size=(args.latent_size,))
-        with torch.no_grad():
-            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(device),y.unsqueeze(0).to(device)], dim=1))
-        
-        plt.figure()
-        plt.imshow(image_generated[0][0].cpu(), cmap='gray')
-        plt.savefig(f"Image_Generated/CVAE_{y}")
+from VAE import AutoEncoder
 
 
 ######### LOSS ############
 reconstruction_loss_function = nn.BCELoss(reduction='sum')
-
 
 def kl_loss_function(mu, log_sigma):
     log_sigma_2 = 2*log_sigma
@@ -101,19 +26,29 @@ def loss_function(reconstructed, original, mu, log_sigma):
     return reconstruction_loss_function(reconstructed, original) + \
         args.beta*kl_loss_function(mu, log_sigma)
 
-
 ##############  TRAIN     ###############
 
 def training_epoch(model, criterion, optimizer, dataloader):
-    for epoch in range(args.num_epochs):
+    start_epoch = 0
+    average_loss = 0.0
+    list_loss_train = []
+    
+    if args.checkpoint and os.path.exists(f"{args.name_model}_checkpoint.pth"):
+        checkpoint = torch.load(f"{args.name_model}_checkpoint.pth")
+
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch']
+        list_loss_train = checkpoint['list_loss_train']
+        print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
+    
+    for epoch in range(start_epoch, args.num_epochs, 1):
         model.train()
-        average_loss = 0.0
-        list_loss_train = []
-        
+
         for x_batch, label_batch in tqdm(dataloader, desc=f"Epoch {epoch+1}/{args.num_epochs}", dynamic_ncols=True):
             optimizer.zero_grad()
-            x_batch = x_batch.to(device)
-            label_batch = label_batch.to(device)
+            x_batch = x_batch.to(args.device)
+            label_batch = label_batch.to(args.device)
             
             output, mu, log_sigma = model(x_batch, label_batch)
             
@@ -136,12 +71,9 @@ def training_epoch(model, criterion, optimizer, dataloader):
     
     # plot loss train
     torch.save(model.state_dict(),f"{args.name_model}_best_model.pth")
+    print("FINISH TRANING")
 
-# 15 eyglasses
-# 16 Goatee
-# 20  Male
-# 22  Mustache
-# 24  No_Beard
+
 def plot_img(img):
     plt.imshow(img)
     plt.savefig('prova')
@@ -152,10 +84,11 @@ if __name__ == '__main__':
     parser.add_argument('--latent_size', type=int, default=32)
     parser.add_argument('--name_model', type=str, default="VAE")
     parser.add_argument('--beta', type=float, default=1.0)
+    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
     
     args.name_model = f"{args.name_model}_{args.latent_size}"
-    print(device)
+    print(args.device)
     random.seed(1)  # Set seed for Python's random
     np.random.seed(1)  # Set seed for NumPy
     torch.manual_seed(1)  # Set seed for PyTorch
@@ -172,14 +105,10 @@ if __name__ == '__main__':
     training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
     
     model = AutoEncoder()
-    model=model.to(device)
+    model=model.to(args.device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     
     training_epoch(model, loss_function, optimizer, training_loader)
-        
-    breakpoint()
-    
-    
     
     
