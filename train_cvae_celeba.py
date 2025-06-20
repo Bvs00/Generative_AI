@@ -85,7 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--latent_size', type=int, default=32)
     parser.add_argument('--name_model', type=str, default="Results_VAE_CelebA/VAE")
     parser.add_argument('--beta', type=float, default=1.0)
-    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('-checkpoint', action='store_true')
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
