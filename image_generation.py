@@ -18,7 +18,6 @@ if __name__ == '__main__':
     parser.add_argument('--name_model', type=str, default="Results_VAE_CelebA/VAE")
     parser.add_argument('--latent_size', type=int, default=32)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--label', nargs="+", required=True)
     args = parser.parse_args()
     
     name_model = args.name_model.split('/')[-1]
@@ -27,8 +26,6 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(f"{args.name_model}_{args.latent_size}_checkpoint.pth")['model_state_dict'])
     model = model.to(device=args.device)
     
-    y = torch.tensor([int(x) for x in args.label], dtype=torch.float, device=args.device)
-    
     for bits in product([0, 1], repeat=3):
-        y = torch.tensor(bits)
+        y = torch.tensor(bits, dtype=torch.float)
         model.generate_sample(y, path=args.saved_path)
