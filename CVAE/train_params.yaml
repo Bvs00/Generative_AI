@@ -1,0 +1,24 @@
+MODEL:
+  TYPE: "VAE"
+  NAME: "CVAE_model"
+  CHECKPOINT_FOLDER: "/user/mmarseglia/GenAI/Generative_AI/CVAE/checkpoints"
+
+TRAINING:
+  NUM_EPOCHS: 250
+  LR: 0.00001 # 1e-5
+  BATCH_SIZE: 128
+  NUM_WORKERS: 10
+
+  ##### SPECIFIC TO CVAE #####
+  LATENT_SIZE: 32
+  BETA: 1. # beta for VAE loss
+  ENCODER_CHANNEL_PROGRESSION: [32, 64, 128, 128]
+  DECODER_CHANNEL_PROGRESSION: [128, 128, 64, 32]
+
+  WITH_AUGMENTATION: False # aug
+
+  TEST_ONLY: False
+
+DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
+
+OUTPUT_PATH: "CVAE/Results"

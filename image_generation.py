@@ -2,7 +2,7 @@ import os
 os.environ["MPLCONFIGDIR"] = os.path.expanduser("/tmp/matplotlib")
 import torch
 import argparse
-from VAE import AutoEncoder
+from Generative_AI.CVAE.VAE import AutoEncoder
 from itertools import product
 
 
