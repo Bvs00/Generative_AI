@@ -1,0 +1,19 @@
+# Byte-compiled / cache
+__pycache__/
+
+# Environment
+.env
+
+# VS Code settings
+.vscode/
+
+# OS-specific
+.DS_Store
+
+# Python virtual environment
+venv/
+
+# weights or checkpoints
+*.ckpt
+*.pt
+*.pth

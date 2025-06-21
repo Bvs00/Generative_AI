@@ -1,3 +1,5 @@
+# model checkpoint name meaning: 
+# f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "VAE"
   NAME: "CVAE_model"

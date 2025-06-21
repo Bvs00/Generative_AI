@@ -82,5 +82,6 @@ def training_hp():
     criterion = VAELoss(beta=BETA)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
     checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth")
+    assert not os.path.exists(checkpoint_path), "Already exist a model with this configuration, please change the parameters in train_params.yaml"
 
     return MODEL_NAME, MODEL_TYPE, checkpoint_path, model, optimizer, criterion, BATCH_SIZE, NUM_EPOCHS, OUTPUT_PATH, custom_transforms
