@@ -2,20 +2,16 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "VAE"
-  NAME: "CVAE_model"
-  CHECKPOINT_FOLDER: "/user/mmarseglia/GenAI/Generative_AI/CVAE/checkpoints"
+  NAME: "CVAE_model" # base name used to save the model
+  CHECKPOINT_FOLDER: "./CVAE/checkpoints"
+  ARCHITECTURE_YAML_NAME: baseline.yaml
 
 TRAINING:
   NUM_EPOCHS: 250
   LR: 0.00001 # 1e-5
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-
-  ##### SPECIFIC TO CVAE #####
-  LATENT_SIZE: 32
   BETA: 1. # beta for VAE loss
-  ENCODER_CHANNEL_PROGRESSION: [32, 64, 128, 128]
-  DECODER_CHANNEL_PROGRESSION: [128, 128, 64, 32]
 
   WITH_AUGMENTATION: False # aug
 

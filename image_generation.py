@@ -1,31 +1,39 @@
-import os
-os.environ["MPLCONFIGDIR"] = os.path.expanduser("/tmp/matplotlib")
-import torch
 import argparse
-from Generative_AI.CVAE.VAE import AutoEncoder
 from itertools import product
+import os
+import yaml
+import torch
+import sys
+from colorama import Fore, Style, init
 
 
-factory_method_model = {
-    'VAE': AutoEncoder
-}
-
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--saved_path', type=str, default="Image_Generated/VAE")
-    parser.add_argument('--name_model', type=str, default="Results_VAE_CelebA/VAE")
-    parser.add_argument('--latent_size', type=int, default=32)
-    parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument("--relative_path", type=str, required=True, 
+                        help="Relative path to the dataset")
+    parser.add_argument("--cp_path", type=str, required=True,
+                        help="Path to the model checkpoint file")
+    parser.add_argument("--save_folder", type=str, default="./Image_Generated/VAE",
+                        help="Path to save the generated samples")
     args = parser.parse_args()
-    
-    name_model = args.name_model.split('/')[-1]
-    
-    model = factory_method_model[name_model](args=args)
-    model.load_state_dict(torch.load(f"{args.name_model}_{args.latent_size}_checkpoint.pth")['model_state_dict'])
-    model = model.to(device=args.device)
-    
+
+    init(autoreset=True) # Initialize colorama for colored output
+
+    sys.path.insert(1, args.relative_path)
+    from custom import test_hp
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    print(Fore.YELLOW + "Loading model...")
+    model = test_hp()
+
+    model.load_state_dict(torch.load(args.cp_path)['model_state_dict'])
+    model.to(device)
+
+    #print colored text
+    print(Fore.GREEN + "Model loaded successfully")
+    print(Fore.YELLOW + "Generating samples...")
     for bits in product([0, 1], repeat=3):
         y = torch.tensor(bits, dtype=torch.float)
-        model.generate_sample(y, path=args.saved_path)
+        model.generate_sample(y, save_folder=args.save_folder, device=device)
+    print(Fore.GREEN + "Samples generated successfully")

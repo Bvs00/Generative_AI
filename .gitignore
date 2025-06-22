@@ -17,3 +17,6 @@ venv/
 *.ckpt
 *.pt
 *.pth
+
+# test generation folder
+Image_Generated/

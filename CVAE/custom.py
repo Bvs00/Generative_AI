@@ -3,8 +3,7 @@ import yaml
 import torch
 import torch.nn as nn
 from torchvision.transforms import v2
-
-from VAE import AutoEncoder
+import VAE
 
 ######### LOSS ############
 class VAELoss(nn.Module):
@@ -36,11 +35,9 @@ def training_hp():
     NUM_EPOCHS = config["TRAINING"]["NUM_EPOCHS"]
     LR = config["TRAINING"]["LR"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
-
-    LATENT_SIZE = config["TRAINING"]["LATENT_SIZE"]
     BETA = config["TRAINING"]["BETA"]
-    ENCODER_CHANNEL_PROGRESSION = config["TRAINING"]["ENCODER_CHANNEL_PROGRESSION"]
-    DECODER_CHANNEL_PROGRESSION = config["TRAINING"]["DECODER_CHANNEL_PROGRESSION"]
+
+    ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
     
     # LOSS_BALANCE = config["TRAINING"]["LOSS_BALANCING"]
     WITH_AUGMENTATION = config["TRAINING"]["WITH_AUGMENTATION"]
@@ -66,18 +63,17 @@ def training_hp():
         ])
         print("Not using data augmentation")
 
-    # Model
-    model = AutoEncoder(
-        latent_size=LATENT_SIZE,
-        encoder_channel_progression=ENCODER_CHANNEL_PROGRESSION,
-        decoder_channel_progression=DECODER_CHANNEL_PROGRESSION
-    )
+    # Load the configuration file
+    with open(os.path.join(current_dir, "architectures_yaml", ARCHITECTURE_YAML_NAME), "r") as f:
+        arch_config = yaml.safe_load(f)
+    LATENT_SIZE = arch_config["LATENT_SIZE"]
 
-    count = 0
+    # Model instance
+    model_class = getattr(VAE, arch_config["CLASS_NAME"])
+    model = model_class(arch_config)
+
     for param in model.parameters(): 
         param.requires_grad = True
-        count+=1
-
     
     criterion = VAELoss(beta=BETA)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
@@ -85,3 +81,26 @@ def training_hp():
     assert not os.path.exists(checkpoint_path), "Already exist a model with this configuration, please change the parameters in train_params.yaml"
 
     return MODEL_NAME, MODEL_TYPE, checkpoint_path, model, optimizer, criterion, BATCH_SIZE, NUM_EPOCHS, OUTPUT_PATH, custom_transforms
+
+
+def test_hp():
+    # Get the absolute path of the current script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Load the configuration file
+    with open(os.path.join(current_dir, "train_params.yaml"), "r") as f:
+        config = yaml.safe_load(f)
+
+    ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
+    
+    # Load the configuration file
+    with open(os.path.join(current_dir, "architectures_yaml", ARCHITECTURE_YAML_NAME), "r") as f:
+        arch_config = yaml.safe_load(f)
+
+    # Model instance
+    model_class = getattr(VAE, arch_config["CLASS_NAME"])
+    model = model_class(arch_config)
+
+    for param in model.parameters(): 
+        param.requires_grad = False
+
+    return model
