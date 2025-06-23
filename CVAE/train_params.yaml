@@ -2,21 +2,21 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "VAE"
-  NAME: "CVAE_model" # base name used to save the model
+  NAME: "res_VAE_CBAM_model" # base name used to save the model
   CHECKPOINT_FOLDER: "./CVAE/checkpoints"
-  ARCHITECTURE_YAML_NAME: baseline.yaml
+  ARCHITECTURE_YAML_NAME: res_VAE.yaml
 
 TRAINING:
   NUM_EPOCHS: 250
   LR: 0.00001 # 1e-5
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 1. # beta for VAE loss
+  BETA: 0.8 # beta for VAE loss
 
   WITH_AUGMENTATION: False # aug
 
   TEST_ONLY: False
 
-DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
+DATASET_PATH: "/localstorage/cspingola/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"

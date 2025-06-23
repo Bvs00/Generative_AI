@@ -4,6 +4,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
+import torch.nn.functional as F
 
 class VAutoEncoder(nn.Module):
     "Assumes that the input images are 64x64"
@@ -114,3 +115,109 @@ class BaselineVAE(VAutoEncoder):
         model.append(nn.Conv2d(k, 3, 3, padding='same'))
         model.append(nn.Sigmoid())
         return model
+    
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels=None, stride=1):
+        super().__init__()
+        if out_channels is None:
+            out_channels = in_channels
+
+        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
+        
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.skip = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.skip = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
+                nn.BatchNorm2d(out_channels)
+            )
+
+    def forward(self, x):
+        identity = self.skip(x) if len(self.skip) > 0 else x
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        return self.relu(out + identity)
+
+class Res_VAE(VAutoEncoder):
+    def __init__(self, architecture_yaml):
+
+        self.latent_size = architecture_yaml['LATENT_SIZE']
+        
+        self.img_channels=3 
+        self.cond_dim=3
+        super().__init__(self.latent_size)
+
+    def build_encoder(self):
+        return nn.Sequential(
+            nn.Conv2d(self.img_channels, 64, kernel_size=3, stride=2, padding=1),  # 64x32x32
+            nn.ReLU(),
+            ResidualBlock(64, 128, stride=2),  # 128x16x16
+            ResidualBlock(128, 256, stride=2),  # 256x8x8
+            ResidualBlock(256, 512, stride=2),  # 512x4x4
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(512, 2*self.latent_size)
+        )
+
+    def build_decoder(self):
+        model = nn.Sequential()
+        size = 4
+        prev = 256
+
+        # Fully connected and reshape
+        model.append(nn.Linear(self.latent_size + 3, prev * size * size))
+        model.append(nn.ReLU())
+        model.append(nn.Unflatten(1, (prev, size, size)))
+
+        channels = [256, 128, 64, 32]  # Progressive decoding
+        for k in channels:
+            model.append(ResidualBlock(prev, prev))
+            model.append(nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False))
+            model.append(nn.Conv2d(prev, k, kernel_size=3, padding=1))
+            model.append(nn.BatchNorm2d(k))
+            model.append(nn.ReLU())
+            prev = k
+            size *= 2
+
+        # Final convolution to image
+        model.append(nn.Conv2d(prev, 3, kernel_size=3, padding=1))
+        model.append(nn.Sigmoid())  # or Tanh if you normalize images to [-1, 1]
+
+        return model
+
+    def forward(self, x, y):
+        # skip_connections = []
+        h = x
+        for layer in self.encoder[:-3]:
+            h = layer(h)
+            # if isinstance(layer, ResidualBlock):
+            #     skip_connections.append(h)
+
+        for layer in self.encoder[-3:]:
+            h = layer(h)
+
+        mu=h[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
+        log_sigma=h[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
+        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
+        out=torch.cat([z,y], dim=1)
+
+        # skip_idx = -1
+        # for i, layer in enumerate(self.decoder):
+            # if isinstance(layer, nn.Upsample):
+            #     out = layer(out)
+            #     if skip_idx >= -len(skip_connections):
+            #         skip = skip_connections[skip_idx]
+            #         skip = F.interpolate(skip, size=out.shape[2:])
+            #         out = torch.cat([out, skip], dim=1)
+            #         skip_idx -= 1
+            # else:
+                # out = layer(out)
+        out = self.decoder(out)
+
+        return out, mu, log_sigma
