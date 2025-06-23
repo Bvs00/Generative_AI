@@ -2,7 +2,7 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "VAE"
-  NAME: "res_VAE_CBAM_model" # base name used to save the model
+  NAME: "res_VAE_model" # base name used to save the model
   CHECKPOINT_FOLDER: "./CVAE/checkpoints"
   ARCHITECTURE_YAML_NAME: res_VAE.yaml
 
