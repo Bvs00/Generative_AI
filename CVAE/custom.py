@@ -31,6 +31,7 @@ def training_hp():
     MODEL_TYPE = config["MODEL"]["TYPE"]
     MODEL_NAME = config["MODEL"]["NAME"]
     CHECKPOINT_FOLDER = config["MODEL"]["CHECKPOINT_FOLDER"]
+    RESUME_FROM_CHECKPOINT = config["MODEL"]["RESUME_FROM_CHECKPOINT"]
 
     NUM_EPOCHS = config["TRAINING"]["NUM_EPOCHS"]
     LR = config["TRAINING"]["LR"]
@@ -78,7 +79,12 @@ def training_hp():
     criterion = VAELoss(beta=BETA)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
     checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth")
-    assert not os.path.exists(checkpoint_path), "Already exist a model with this configuration, please change the parameters in train_params.yaml"
+    if os.path.exists(checkpoint_path) and RESUME_FROM_CHECKPOINT:
+        print(f"Resuming from checkpoint: {checkpoint_path}")
+    elif not os.path.exists(checkpoint_path):
+        print(f"Checkpoint not found, will create a new one: {checkpoint_path}")
+    else:
+        assert False, "Checkpoint exists but RESUME_FROM_CHECKPOINT is set to False, please check your configuration."
 
     return MODEL_NAME, MODEL_TYPE, checkpoint_path, model, optimizer, criterion, BATCH_SIZE, NUM_EPOCHS, OUTPUT_PATH, custom_transforms
 
