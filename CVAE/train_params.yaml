@@ -2,16 +2,16 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "VAE"
-  NAME: "resnet_VAE" # base name used to save the model
+  NAME: "resnet_mix_VAE" # base name used to save the model
   CHECKPOINT_FOLDER: "./CVAE/checkpoints"
-  ARCHITECTURE_YAML_NAME: resnet_VAE.yaml
+  ARCHITECTURE_YAML_NAME: resnet_mix_VAE.yaml
 
 TRAINING:
   NUM_EPOCHS: 1000
   LR: 0.001 # 1e-3
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 0.1 # beta for VAE loss
+  BETA: 1.0 # beta for VAE loss
 
   WITH_AUGMENTATION: False # aug
 
