@@ -7,6 +7,7 @@ import os
 import torch.nn.functional as F
 from cbam import CBAM
 import cv2
+from torchvision.models import resnet18, densenet121
 
 class VAutoEncoder(nn.Module):
     "Assumes that the input images are 64x64"
@@ -242,3 +243,58 @@ class Res_VAE(VAutoEncoder):
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+
+
+###### ResNetVAE
+
+class ResNetVAE(VAutoEncoder):
+    def __init__(self, architecture_yaml):
+
+        self.latent_size = architecture_yaml['LATENT_SIZE']
+        self.img_channels=3 
+        super().__init__(self.latent_size)  # Proiezione della condizione
+        self.fc_mu = nn.Linear(512, self.latent_size)
+        self.fc_log_var = nn.Linear(512, self.latent_size)
+        self.fc_decoder = nn.Linear(self.latent_size + 3, 512 * 4 * 4)
+
+    def build_encoder(self):
+        base_model = resnet18()
+        base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        return nn.Sequential(
+            nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+        )
+        
+
+    def build_decoder(self):
+        return nn.Sequential(
+            nn.ConvTranspose2d(512, 256, 4, 2, 1),  # 8x8
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(256, 128, 4, 2, 1),  # 16x16
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(128, 64, 4, 2, 1),  # 32x32
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(64, 3, 4, 2, 1),  # 64x64
+            nn.Sigmoid()  # output in [0,1]
+        )
+        
+
+    def forward(self, x, y):
+        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+        h=torch.cat([x,cond], dim=1)       # l'outpur dell'encoder è 2*LATENT_SIZE
+        
+        out = self.encoder(h)
+        mu = self.fc_mu(out)
+        log_sigma = self.fc_log_var(out)
+        
+        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
+        
+        z_decoder = self.fc_decoder(torch.cat([z, y], dim=1)).view(-1, 512, 4, 4)
+        out = self.decoder(z_decoder)
+
+        return out, mu, log_sigma

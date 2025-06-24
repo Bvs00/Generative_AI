@@ -18,5 +18,8 @@ venv/
 *.pt
 *.pth
 
+# model parameters
+CVAE/train_params.yaml
+
 # test generation folder
 Image_Generated/
