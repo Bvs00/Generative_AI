@@ -1,0 +1,82 @@
+nohup: input ignorato
+Not using data augmentation
+Trainable parameters: 41649939
+Non-trainable parameters: 0.0
+Total parameters: 41649939.0
+/home/inbit/Scrivania/Dottorato_Bvs/ICareMeEnv/lib/python3.12/site-packages/torch/_tensor.py:1128: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/aten/src/ATen/native/Scalar.cpp:22.)
+  return self.item().__format__(format_spec)
+Epoch 1 completed. Average loss = 6.541862408216065e+19
+Epoch 2 completed. Average loss = 6.485917387425055e+17
+Epoch 3 completed. Average loss = 2.2194966898267705e+20
+Epoch 4 completed. Average loss = 4.377061507054174e+18
+Epoch 5 completed. Average loss = 1.778812245245952e+17
+Epoch 6 completed. Average loss = 1.7547681593294848e+16
+Epoch 7 completed. Average loss = 1342555908210688.0
+Epoch 8 completed. Average loss = 456528482009088.0
+Epoch 9 completed. Average loss = 242370775875584.0
+Epoch 10 completed. Average loss = 2231757963264.0
+Epoch 11 completed. Average loss = 798915428352.0
+Epoch 12 completed. Average loss = 41616735731712.0
+Epoch 13 completed. Average loss = 98909372416.0
+Epoch 14 completed. Average loss = 2052182507520.0
+Epoch 15 completed. Average loss = 178942312448.0
+Epoch 16 completed. Average loss = 78495694848.0
+Epoch 17 completed. Average loss = 3383761408.0
+Epoch 18 completed. Average loss = 14425038848.0
+Epoch 19 completed. Average loss = 960775296.0
+Epoch 20 completed. Average loss = 639283264.0
+Epoch 21 completed. Average loss = 349031072.0
+Epoch 22 completed. Average loss = 67258352.0
+Epoch 23 completed. Average loss = 109599488.0
+Epoch 24 completed. Average loss = 37445272.0
+Epoch 25 completed. Average loss = 3104750.5
+Epoch 26 completed. Average loss = 7017426.5
+Epoch 27 completed. Average loss = 1461109.375
+Epoch 28 completed. Average loss = 230967.5625
+Epoch 29 completed. Average loss = 677893.6875
+Epoch 30 completed. Average loss = 64659.19140625
+Epoch 31 completed. Average loss = 24549.01171875
+Epoch 32 completed. Average loss = 31022.828125
+Epoch 33 completed. Average loss = 19034.73828125
+Epoch 34 completed. Average loss = 3895.508544921875
+Epoch 35 completed. Average loss = 4012.31689453125
+Epoch 36 completed. Average loss = 1421.8555908203125
+Epoch 37 completed. Average loss = 1427.909912109375
+Epoch 38 completed. Average loss = 1178.3673095703125
+Epoch 39 completed. Average loss = 1126.8690185546875
+Epoch 40 completed. Average loss = 1035.448486328125
+Epoch 41 completed. Average loss = 974.8873901367188
+Epoch 42 completed. Average loss = 919.3809814453125
+Epoch 43 completed. Average loss = 909.8115234375
+Epoch 44 completed. Average loss = 908.8986206054688
+Epoch 45 completed. Average loss = 892.690185546875
+Epoch 46 completed. Average loss = 885.5165405273438
+Epoch 47 completed. Average loss = 882.4974975585938
+Epoch 48 completed. Average loss = 880.6895751953125
+Epoch 49 completed. Average loss = 878.2396850585938
+Epoch 50 completed. Average loss = 877.2407836914062
+Epoch 51 completed. Average loss = 876.338623046875
+Epoch 52 completed. Average loss = 875.214111328125
+Epoch 53 completed. Average loss = 874.643798828125
+Epoch 54 completed. Average loss = 874.2197265625
+Epoch 55 completed. Average loss = 873.928955078125
+Epoch 56 completed. Average loss = 873.1442260742188
+Epoch 57 completed. Average loss = 872.6912231445312
+Epoch 58 completed. Average loss = 872.44873046875
+Epoch 59 completed. Average loss = 871.952880859375
+Epoch 60 completed. Average loss = 871.8297729492188
+Epoch 61 completed. Average loss = 871.4539794921875
+Epoch 62 completed. Average loss = 871.2774047851562
+Epoch 63 completed. Average loss = 870.9782104492188
+Epoch 64 completed. Average loss = 870.7262573242188
+Epoch 65 completed. Average loss = 870.694091796875
+Epoch 66 completed. Average loss = 870.277587890625
+Epoch 67 completed. Average loss = 870.1790771484375
+Epoch 68 completed. Average loss = 869.8982543945312
+Epoch 69 completed. Average loss = 869.8439331054688
+Epoch 70 completed. Average loss = 869.5845947265625
+Epoch 71 completed. Average loss = 869.4522705078125
+Epoch 72 completed. Average loss = 869.3029174804688
+Epoch 73 completed. Average loss = 869.1890869140625
+Epoch 74 completed. Average loss = 868.8809204101562

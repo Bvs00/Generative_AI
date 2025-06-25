@@ -58,7 +58,8 @@ class VAutoEncoder(nn.Module):
 
     def train_one_epoch(self, criterion, optimizer, train_loader, device):
         average_loss = 0.0
-        for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
+        # for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
+        for x_batch, label_batch in train_loader:
             optimizer.zero_grad()
             x_batch = x_batch.to(device)
             label_batch = label_batch.to(device)
@@ -369,10 +370,27 @@ class ResNet_Mix_VAE(VAutoEncoder):
         eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
         z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
         
-        integers = (y * self.powers).sum(dim=1).long()
-        y_decoder = self.cond_latent(integers).to(x.device)
-        # breakpoint()
+        integers = (y * self.powers).sum(dim=1).long().detach()
+        y_decoder = self.cond_latent(integers).to(y.device).detach()
+        
         z_decoder = torch.cat([z, y_decoder], dim=1)
         out = self.decoder(z_decoder)
 
         return out, mu, log_sigma
+    
+    def generate_sample(self, y, save_folder, device='cpu'):
+        self.eval()
+        z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(device)
+        y = y.unsqueeze(0).to(device)
+        
+        integers = (y * self.powers).sum(dim=1).long()
+        y_decoder = self.cond_latent(integers)
+        with torch.no_grad():
+            image_generated = self.decoder(torch.cat([z,y_decoder], dim=1))
+        
+        label_str = '_'.join(str(int(v)) for v in y.squeeze(0).tolist())
+        os.makedirs(save_folder, exist_ok=True)
+
+        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)

@@ -17,6 +17,6 @@ TRAINING:
 
   TEST_ONLY: False
 
-DATASET_PATH: "/mnt/datasets/eeg/celeba/" # MATTIA DATASET PATH
+DATASET_PATH: "/home/inbit/Scrivania/Temp_Bvs/celeba/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"
