@@ -1,0 +1,12 @@
+nohup: input ignorato
+Not using data augmentation
+Checkpoint not found, will create a new one: ./CVAE/checkpoints/resnet_mix_VAE_0.001_128_128_1.0.pth
+Trainable parameters: 39420435
+Non-trainable parameters: 0.0
+Total parameters: 39420435.0
+Epoch 1 completed. Average loss = 172.46963500976562
+Epoch 2 completed. Average loss = 88.56891632080078
+Epoch 3 completed. Average loss = 86.90277099609375
+Epoch 4 completed. Average loss = 85.74850463867188
+Epoch 5 completed. Average loss = 84.97034454345703
+Epoch 6 completed. Average loss = 84.3345718383789

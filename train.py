@@ -29,8 +29,7 @@ def training_epoch(model, checkpoint_path, criterion, optimizer, dataloader):
     
     for epoch in range(start_epoch, num_epochs, 1):
         average_loss = model.train_one_epoch(criterion, optimizer, dataloader)
-
-        print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*1000)}")
+        print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*10000)}")
         list_loss_train.append(average_loss/len(dataloader))
         
         checkpoint = {

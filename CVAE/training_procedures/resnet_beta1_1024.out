@@ -1,0 +1,33 @@
+nohup: input ignorato
+Not using data augmentation
+Checkpoint not found, will create a new one: ./CVAE/checkpoints/resnet_VAE_0.001_128_1024_1.0.pth
+Trainable parameters: 23414851
+Non-trainable parameters: 0.0
+Total parameters: 23414851.0
+Epoch 1 completed. Average loss = 87.24468231201172
+Epoch 2 completed. Average loss = 84.06964111328125
+Epoch 3 completed. Average loss = 83.26216125488281
+Epoch 4 completed. Average loss = 82.93611145019531
+Epoch 5 completed. Average loss = 82.72866821289062
+Epoch 6 completed. Average loss = 82.55067443847656
+Epoch 7 completed. Average loss = 82.40750885009766
+Epoch 8 completed. Average loss = 82.29788208007812
+Epoch 9 completed. Average loss = 82.21976470947266
+Epoch 10 completed. Average loss = 82.1605453491211
+Epoch 11 completed. Average loss = 82.10150909423828
+Epoch 12 completed. Average loss = 82.04590606689453
+Epoch 13 completed. Average loss = 81.9894790649414
+Epoch 14 completed. Average loss = 81.94813537597656
+Epoch 15 completed. Average loss = 81.91350555419922
+Epoch 16 completed. Average loss = 81.88020324707031
+Epoch 17 completed. Average loss = 81.85389709472656
+Epoch 18 completed. Average loss = 81.83524322509766
+Epoch 19 completed. Average loss = 81.80677032470703
+Epoch 20 completed. Average loss = 81.78929901123047
+Epoch 21 completed. Average loss = 81.77396392822266
+Epoch 22 completed. Average loss = 81.75493621826172
+Epoch 23 completed. Average loss = 81.7436752319336
+Epoch 24 completed. Average loss = 81.7278060913086
+Epoch 25 completed. Average loss = 81.70841217041016
+Epoch 26 completed. Average loss = 81.69627380371094
+Epoch 27 completed. Average loss = 81.6800765991211

@@ -7,7 +7,7 @@ import os
 import torch.nn.functional as F
 from cbam import CBAM
 import cv2
-from torchvision.models import resnet18, densenet121
+from torchvision.models import resnet18
 
 class VAutoEncoder(nn.Module):
     "Assumes that the input images are 64x64"
@@ -72,7 +72,7 @@ class VAutoEncoder(nn.Module):
             loss.backward()
             optimizer.step()
             
-            average_loss += loss
+            average_loss += loss.detach()
         return average_loss
     
 
@@ -301,6 +301,19 @@ class ResNetVAE(VAutoEncoder):
 
         return out, mu, log_sigma
 
+    
+    def generate_sample(self, y, save_folder):
+        self.eval()
+        z = torch.randn(size=(self.latent_size,))
+        with torch.no_grad():
+            image_generated = self.decoder(self.fc_decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1)).view(-1, 512, 4, 4))
+        
+        label_str = '_'.join(str(int(v)) for v in y.tolist())
+        os.makedirs(save_folder, exist_ok=True)
+
+        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
 
 ##### resnet custom
 class ResNet_Mix_VAE(VAutoEncoder):
@@ -379,10 +392,10 @@ class ResNet_Mix_VAE(VAutoEncoder):
 
         return out, mu, log_sigma
     
-    def generate_sample(self, y, save_folder, device='cpu'):
+    def generate_sample(self, y, save_folder):
         self.eval()
-        z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(device)
-        y = y.unsqueeze(0).to(device)
+        z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(self.device)
+        y = y.unsqueeze(0).to(self.device)
         
         integers = (y * self.powers).sum(dim=1).long()
         y_decoder = self.cond_latent(integers)
