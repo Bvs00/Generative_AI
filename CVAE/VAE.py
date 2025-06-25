@@ -14,6 +14,7 @@ class VAutoEncoder(nn.Module):
     def __init__(self, latent_size):
         #latent_size=128, encoder_channel_progression=[32, 64, 128, 128], decoder_channel_progression=[128, 128, 64, 32]):
         super().__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.latent_size=latent_size
         self.encoder=self.build_encoder()
         self.decoder=self.build_decoder()
@@ -41,11 +42,11 @@ class VAutoEncoder(nn.Module):
     def build_decoder(self):
         raise NotImplementedError("Must be implemented in subclass")
     
-    def generate_sample(self, y, save_folder, device='cpu'):
+    def generate_sample(self, y, save_folder):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
-            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(device),y.unsqueeze(0).to(device)], dim=1))
+            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1))
             
         
         label_str = '_'.join(str(int(v)) for v in y.tolist())
@@ -56,13 +57,13 @@ class VAutoEncoder(nn.Module):
         cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
         
 
-    def train_one_epoch(self, criterion, optimizer, train_loader, device):
+    def train_one_epoch(self, criterion, optimizer, train_loader):
         average_loss = 0.0
         # for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
         for x_batch, label_batch in train_loader:
             optimizer.zero_grad()
-            x_batch = x_batch.to(device)
-            label_batch = label_batch.to(device)
+            x_batch = x_batch.to(self.device)
+            label_batch = label_batch.to(self.device)
             
             output, mu, log_sigma = self.forward(x_batch, label_batch)
             
@@ -229,13 +230,13 @@ class Res_VAE(VAutoEncoder):
         return out, mu, log_sigma
     
     
-    def generate_sample(self, y, save_folder, device='cpu'):
+    def generate_sample(self, y, save_folder):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
             
-            y_proj = self.cond_latent_proj(y.to(device))
-            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(device),y_proj.unsqueeze(0).to(device)], dim=1))
+            y_proj = self.cond_latent_proj(y.to(self.device))
+            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y_proj.unsqueeze(0).to(self.device)], dim=1))
             
         
         label_str = '_'.join(str(int(v)) for v in y.tolist())
@@ -311,9 +312,9 @@ class ResNet_Mix_VAE(VAutoEncoder):
         super().__init__(self.latent_size)  # Proiezione della condizione
         self.fc_mu = nn.Linear(512, self.latent_size)
         self.fc_log_var = nn.Linear(512, self.latent_size)
-        self.cond_latent = nn.Embedding(8, self.cond_dim)
-        self.one_hot_y = torch.eye(8).long().to('cuda:0')
-        self.powers = 2 ** torch.arange(3 - 1, -1, -1).to('cuda:0')
+        self.cond_latent = nn.Embedding(8, self.cond_dim).to(self.device)  # Embedding per le 8 classi condizionali
+        self.one_hot_y = torch.eye(8).long().to(self.device)
+        self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
 
     def build_encoder(self):
         base_model = resnet18()
@@ -370,9 +371,9 @@ class ResNet_Mix_VAE(VAutoEncoder):
         eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
         z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
         
-        integers = (y * self.powers).sum(dim=1).long().detach()
-        y_decoder = self.cond_latent(integers).to(y.device).detach()
-        
+        integers = (y * self.powers).sum(dim=1).long()
+        y_decoder = self.cond_latent(integers)
+        # breakpoint()
         z_decoder = torch.cat([z, y_decoder], dim=1)
         out = self.decoder(z_decoder)
 

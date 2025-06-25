@@ -13,7 +13,7 @@ import sys
 
 ##############  TRAIN     ###############
 
-def training_epoch(model, checkpoint_path, criterion, optimizer, dataloader, device="cpu"):
+def training_epoch(model, checkpoint_path, criterion, optimizer, dataloader):
     start_epoch = 0
     list_loss_train = []
     model.train()
@@ -28,7 +28,7 @@ def training_epoch(model, checkpoint_path, criterion, optimizer, dataloader, dev
         print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
     
     for epoch in range(start_epoch, num_epochs, 1):
-        average_loss = model.train_one_epoch(criterion, optimizer, dataloader, device)
+        average_loss = model.train_one_epoch(criterion, optimizer, dataloader)
 
         print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*1000)}")
         list_loss_train.append(average_loss/len(dataloader))
@@ -89,6 +89,6 @@ if __name__ == '__main__':
     
     training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
 
-    training_epoch(model, checkpoint_path, loss_function, optimizer, training_loader, device)
+    training_epoch(model, checkpoint_path, loss_function, optimizer, training_loader)
     
     
