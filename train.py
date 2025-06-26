@@ -2,8 +2,7 @@ import os
 os.environ["MPLCONFIGDIR"] = os.path.expanduser("/tmp/matplotlib")
 import torch
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, CelebA
-from matplotlib import pyplot as plt
+from torchvision.datasets import CelebA
 import argparse
 from CelebA import CelebADataset
 import random
@@ -35,7 +34,7 @@ if __name__ == '__main__':
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    checkpoint_path, model, batch_size, custom_transforms = training_hp()
+    checkpoint_path, model, batch_size, num_workers, custom_transforms = training_hp()
     
     model=model.to(device)
 
@@ -50,7 +49,7 @@ if __name__ == '__main__':
     # training_set = CelebA(root='./celeba', transform=transform, download=False, split='train')
     dataset = CelebA(root=DATASET_PATH, split='all', transform=custom_transforms, target_type="attr", download=False)
     
-    training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
+    training_loader = DataLoader(CelebADataset(dataset), batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, persistent_workers=True)
 
     model.training_epoch(checkpoint_path, training_loader)
     

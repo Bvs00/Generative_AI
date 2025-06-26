@@ -21,6 +21,7 @@ def training_hp():
     LR_GEN = config["TRAINING"]["GENERATOR"]["LR"]
     LR_DISC = config["TRAINING"]["DISCRIMINATOR"]["LR"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
+    NUM_WORKERS = config["TRAINING"]["NUM_WORKERS"]
     LABEL_SMOOTHING = config["TRAINING"]["LABEL_SMOOTHING"]
 
     ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
@@ -65,10 +66,10 @@ def training_hp():
     else:
         assert False, "Checkpoint exists but RESUME_FROM_CHECKPOINT is set to False, please check your configuration."
 
-    return checkpoint_path, model, BATCH_SIZE, custom_transforms
+    return checkpoint_path, model, BATCH_SIZE, NUM_WORKERS, custom_transforms
 
 
-def test_hp():
+def test_hp(cp_path):
     # Get the absolute path of the current script
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # Load the configuration file
@@ -85,7 +86,9 @@ def test_hp():
     model_class = getattr(GAN, arch_config["CLASS_NAME"])
     model = model_class(arch_config, config)
 
-    for param in model.parameters(): 
+    for param in model.generator.model.parameters(): 
         param.requires_grad = False
+    
+    model.generator.model.load_state_dict(torch.load(cp_path)['model_state_dict_generator'])
 
     return model

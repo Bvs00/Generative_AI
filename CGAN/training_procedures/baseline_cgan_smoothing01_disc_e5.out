@@ -1,0 +1,12 @@
+nohup: ignoring input
+Not using data augmentation
+Checkpoint not found, will create a new one: ./CGAN/checkpoints/baseline_CGAN_g_0.001_d_1e-05_0.1_512_128.pth
+Trainable parameters: 3992613
+Non-trainable parameters: 0.0
+Total parameters: 3992613.0
+Epoch: 1
+	GLoss: 0.6532614889244238, DLoss: 1.412049230903086
+		DTrue: 0.538026310729258, DSynth: 0.5263119864493909
+Epoch: 2
+	GLoss: 1.9176383638622785, DLoss: 0.793524934035359
+		DTrue: 0.8154534956421515, DSynth: 0.1892293890505427

@@ -1,9 +1,10 @@
+import os
+os.environ["MPLCONFIGDIR"] = os.path.expanduser("/tmp/matplotlib")
 from abc import abstractmethod
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import os
 import torch.nn.functional as F
 from cbam import CBAM
 import cv2
@@ -151,7 +152,20 @@ class GAN(nn.Module):
         
         return sum_gloss/batches, sum_dloss/batches, sum_dtrue/batches, sum_dsynth/batches
 
+    def generate_sample(self, y, save_folder):
+        self.generator.model.eval()
+        z = torch.randn(size=(self.latent_size,))
+        with torch.no_grad():
+            image_generated = self.generator(z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device))
+        
+        label_str = '_'.join(str(int(v)) for v in y.tolist())
+        os.makedirs(save_folder, exist_ok=True)
 
+        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+
+######################  BASELINE GAN ################################
 class BaselineGAN(GAN):
     def __init__(self, architecture_yaml, train_yaml):
         super().__init__(architecture_yaml, train_yaml)
@@ -232,3 +246,4 @@ class BaselineGenerator(Generator):
     def forward(self, z, c):
         zc = torch.cat([z,c], dim=1)
         return self.model(zc)
+#########################################################################################################

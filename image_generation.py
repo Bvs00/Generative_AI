@@ -25,9 +25,9 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(Fore.YELLOW + "Loading model...")
-    model = test_hp()
+    model = test_hp(args.cp_path)
 
-    model.load_state_dict(torch.load(args.cp_path)['model_state_dict'])
+    # model.load_state_dict(torch.load(args.cp_path)['model_state_dict'])
     model.to(device)
 
     #print colored text
