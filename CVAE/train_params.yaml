@@ -12,12 +12,12 @@ TRAINING:
   LR: 0.001 # 1e-3
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 1.0 # beta for VAE loss
+  BETA: 8.0 # beta for VAE loss
 
   WITH_AUGMENTATION: False # aug
 
   TEST_ONLY: False
 
-DATASET_PATH: "/home/inbit/Scrivania/Temp_Bvs/celeba/" # MATTIA DATASET PATH
+DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"

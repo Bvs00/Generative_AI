@@ -11,41 +11,6 @@ import numpy as np
 import yaml
 import sys
 
-##############  TRAIN     ###############
-
-def training_epoch(model, checkpoint_path, criterion, optimizer, dataloader):
-    start_epoch = 0
-    list_loss_train = []
-    model.train()
-
-    if checkpoint_path and os.path.exists(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
-
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        start_epoch = checkpoint['epoch']
-        list_loss_train = checkpoint['list_loss_train']
-        print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
-    
-    for epoch in range(start_epoch, num_epochs, 1):
-        average_loss = model.train_one_epoch(criterion, optimizer, dataloader)
-        print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*10000)}")
-        list_loss_train.append(average_loss/len(dataloader))
-        
-        checkpoint = {
-            'epoch': epoch+1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'list_loss_train': list_loss_train,
-        }
-        torch.save(checkpoint, checkpoint_path)
-
-    print("FINISH TRANING")
-
-
-def plot_img(img):
-    plt.imshow(img)
-    plt.savefig('prova')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train the model")
@@ -71,7 +36,7 @@ if __name__ == '__main__':
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model_name, model_type, checkpoint_path, model, optimizer, loss_function, batch_size, num_epochs, output_path, custom_transforms = training_hp()
+    checkpoint_path, model, batch_size, custom_transforms = training_hp()
     
     model=model.to(device)
 
@@ -88,6 +53,6 @@ if __name__ == '__main__':
     
     training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
 
-    training_epoch(model, checkpoint_path, loss_function, optimizer, training_loader)
+    model.training_epoch(checkpoint_path, training_loader)
     
     

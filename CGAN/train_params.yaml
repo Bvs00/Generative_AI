@@ -1,23 +1,26 @@
 # model checkpoint name meaning: 
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
-  TYPE: "VAE"
-  NAME: "resnet_VAE" # base name used to save the model
-  CHECKPOINT_FOLDER: "./CVAE/checkpoints"
-  ARCHITECTURE_YAML_NAME: resnet_VAE.yaml
-  RESUME_FROM_CHECKPOINT: True
+  TYPE: "CGAN"
+  NAME: "baseline_CGAN" # base name used to save the model
+  CHECKPOINT_FOLDER: "./CGAN/checkpoints"
+  ARCHITECTURE_YAML_NAME: baseline_CGAN.yaml
+  RESUME_FROM_CHECKPOINT: False
 
 TRAINING:
   NUM_EPOCHS: 1000
-  LR: 0.001 # 1e-3
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 1.0 # beta for VAE loss
-
+  LABEL_SMOOTHING: 0.0
   WITH_AUGMENTATION: False # aug
+  GENRATOR:
+    LR: 0.001 # 1e-3
+  DISCRIMINATOR: 
+    LR: 0.001 # 1e-3
 
-  TEST_ONLY: False
+
+TEST_ONLY: False
 
 DATASET_PATH: "/home/inbit/Scrivania/Temp_Bvs/celeba/" # MATTIA DATASET PATH
 
-OUTPUT_PATH: "CVAE/Results"
+OUTPUT_PATH: "CGAN/Results"
