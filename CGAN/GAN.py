@@ -41,7 +41,7 @@ class Discriminator(nn.Module):
         self.label_smoothing = label_smoothing
         self.lr_disc = lr
     
-    def disc_loss_function(self, d_true,d_synth):
+    def disc_loss_function(self, d_true, d_synth):
         t_true=torch.ones_like(d_true) - self.label_smoothing
         t_synth=torch.zeros_like(d_synth) + self.label_smoothing
         return binary_cross_entropy(d_true,t_true) + binary_cross_entropy(d_synth,t_synth)
@@ -199,10 +199,7 @@ class BaselineDiscriminator(Discriminator):
         model.append(nn.Linear(features, k))
         model.append(nn.LeakyReLU())
         model.append(nn.Dropout(p=0.3))
-        model.append(nn.Linear(k, k//2))
-        model.append(nn.LeakyReLU())
-        model.append(nn.Dropout(p=0.3))
-        model.append(nn.Linear(k//2, 2))
+        model.append(nn.Linear(k, 2))
         model.append(nn.Sigmoid())
         
         # assert size==8
@@ -225,16 +222,22 @@ class BaselineGenerator(Generator):
     def build_generator(self):
         model=nn.Sequential()
         size=4
-        prev=128
-        model.append(nn.Linear(self.latent_size + 3, prev*size*size))
-        model.append(nn.ReLU())
+        prev=self.generator_channel_progression[0]
+        model.append(nn.Linear(self.latent_size + 3, (prev//2)*size*size))
+        model.append(nn.GELU())
+        model.append(nn.Linear((prev//2)*size*size, prev*size*size))
+        model.append(nn.GELU())
         model.append(nn.Unflatten(1, (prev, size, size)))
         for k in self.generator_channel_progression:
             model.append(nn.Conv2d(prev, k, 3, padding='same'))
-            model.append(nn.ReLU())
+            model.append(nn.BatchNorm2d(k))
+            model.append(nn.GELU())
+            model.append(nn.Conv2d(k, k, 3, padding='same'))
+            model.append(nn.BatchNorm2d(k))
+            model.append(nn.GELU())
             model.append(nn.ConvTranspose2d(k, k, 3, stride=2, padding=1,
                                             output_padding=1))
-            model.append(nn.ReLU())
+            model.append(nn.GELU())
             prev=k
             size=size*2
         # assert size==128
@@ -247,3 +250,77 @@ class BaselineGenerator(Generator):
         zc = torch.cat([z,c], dim=1)
         return self.model(zc)
 #########################################################################################################
+
+##########################      RESNET GAN  #############################
+class ResNetGAN(GAN):
+    def __init__(self, architecture_yaml, train_yaml):
+        super().__init__(architecture_yaml, train_yaml)
+        self.discriminator = ResNetDiscriminator(self.label_smoothing, self.lr_disc)
+        self.generator = BasicGenerator(self.latent_size, self.lr_gen)
+    
+    def generate_sample(self, y, save_folder):
+        self.eval()
+        z = torch.randn(size=(self.latent_size,))
+        with torch.no_grad():
+            image_generated = self.decoder(self.fc_decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1)).view(-1, 512, 4, 4))
+        
+        label_str = '_'.join(str(int(v)) for v in y.tolist())
+        os.makedirs(save_folder, exist_ok=True)
+
+        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+        
+
+class ResNetDiscriminator(Discriminator):
+    def __init__(self, label_smoothing, lr_disc):
+        super().__init__(label_smoothing, lr_disc)
+        self.model=self.build_discriminator()
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr_disc)
+
+        
+    def build_discriminator(self):
+        base_model = resnet18()
+        base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        return nn.Sequential(
+            nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(512, 128),
+            nn.LeakyReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128,2),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x, c):
+        cond = c.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+        out = self.model(torch.cat([x, cond], dim=1))
+        return out
+        
+    
+class BasicGenerator(Generator):
+    def __init__(self, latent_size, lr_gen):
+        super().__init__(latent_size, lr_gen)
+        self.model=self.build_generator()
+        self.fc_generator = nn.Linear(self.latent_size + 3, 512 * 4 * 4)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr_gen)
+
+    def build_generator(self):
+        return nn.Sequential(
+            nn.ConvTranspose2d(512, 256, 4, 2, 1),  # 8x8
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(256, 128, 4, 2, 1),  # 16x16
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(128, 64, 4, 2, 1),  # 32x32
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(64, 3, 4, 2, 1),  # 64x64
+            nn.Sigmoid()  # output in [0,1]
+        )
+    
+    def forward(self, z, c):
+        zc = self.fc_generator(torch.cat([z,c], dim=1)).view(-1, 512, 4, 4)
+        return self.model(zc)
