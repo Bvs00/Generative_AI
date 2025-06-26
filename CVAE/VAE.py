@@ -68,8 +68,8 @@ class VAutoEncoder(nn.Module):
         
     def train_one_epoch(self, train_loader):
         average_loss = 0.0
-        # for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
-        for x_batch, label_batch in train_loader:
+        for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
+        # for x_batch, label_batch in train_loader:
             self.optimizer.zero_grad()
             x_batch = x_batch.to(self.device)
             label_batch = label_batch.to(self.device)
@@ -84,13 +84,13 @@ class VAutoEncoder(nn.Module):
             average_loss += loss.detach()
         return average_loss
 
-    def training_epoch(self, dataloader):
+    def training_epoch(self, checkpoint_path, dataloader):
         start_epoch = 0
         list_loss_train = []
         self.train()
 
-        if self.checkpoint_path and os.path.exists(self.checkpoint_path):
-            checkpoint = torch.load(self.checkpoint_path)
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            checkpoint = torch.load(checkpoint_path)
 
             self.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -99,7 +99,7 @@ class VAutoEncoder(nn.Module):
             print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
         
         for epoch in range(start_epoch, self.num_epochs, 1):
-            average_loss = self.train_one_epoch(self.criterion, self.optimizer, dataloader)
+            average_loss = self.train_one_epoch(dataloader)
 
             print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*1000)}")
             list_loss_train.append(average_loss/len(dataloader))
@@ -110,7 +110,7 @@ class VAutoEncoder(nn.Module):
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'list_loss_train': list_loss_train,
             }
-            torch.save(checkpoint, self.checkpoint_path)
+            torch.save(checkpoint, checkpoint_path)
 
         print("FINISH TRANING")
     

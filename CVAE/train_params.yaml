@@ -18,6 +18,6 @@ TRAINING:
 
   TEST_ONLY: False
 
-DATASET_PATH: "/home/inbit/Scrivania/Temp_Bvs/celeba/" # MATTIA DATASET PATH
+DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"

@@ -65,7 +65,7 @@ def training_hp():
     else:
         assert False, "Checkpoint exists but RESUME_FROM_CHECKPOINT is set to False, please check your configuration."
 
-    return checkpoint_path, model, BATCH_SIZE, NUM_EPOCHS, custom_transforms
+    return checkpoint_path, model, BATCH_SIZE, custom_transforms
 
 
 def test_hp():

@@ -53,6 +53,6 @@ if __name__ == '__main__':
     
     training_loader = DataLoader(CelebADataset(dataset), batch_size=128, shuffle=True, num_workers=10, pin_memory=True, persistent_workers=True)
 
-    model.training_epoch(model, checkpoint_path, training_loader)
+    model.training_epoch(checkpoint_path, training_loader)
     
     
