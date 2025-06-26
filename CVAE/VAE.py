@@ -52,19 +52,17 @@ class VAutoEncoder(nn.Module):
     def build_decoder(self):
         raise NotImplementedError("Must be implemented in subclass")
     
-    def generate_sample(self, y, save_folder):
+    def generate_sample(self, y, save_folder, time):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
             image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1))
-            
         
-        label_str = '_'.join(str(int(v)) for v in y.tolist())
         os.makedirs(save_folder, exist_ok=True)
 
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
         
     def train_one_epoch(self, train_loader):
         average_loss = 0.0
@@ -279,21 +277,19 @@ class Res_VAE(VAutoEncoder):
         return out, mu, log_sigma
     
     
-    def generate_sample(self, y, save_folder):
+    def generate_sample(self, y, save_folder, time):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
             
             y_proj = self.cond_latent_proj(y.to(self.device))
             image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y_proj.unsqueeze(0).to(self.device)], dim=1))
-            
-        
-        label_str = '_'.join(str(int(v)) for v in y.tolist())
+
         os.makedirs(save_folder, exist_ok=True)
 
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
 
 
 ###### ResNetVAE
@@ -351,18 +347,17 @@ class ResNetVAE(VAutoEncoder):
         return out, mu, log_sigma
 
     
-    def generate_sample(self, y, save_folder):
+    def generate_sample(self, y, save_folder, time):
         self.eval()
         z = torch.randn(size=(self.latent_size,))
         with torch.no_grad():
             image_generated = self.decoder(self.fc_decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1)).view(-1, 512, 4, 4))
         
-        label_str = '_'.join(str(int(v)) for v in y.tolist())
         os.makedirs(save_folder, exist_ok=True)
 
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
 
 ##### resnet custom
 class ResNet_Mix_VAE(VAutoEncoder):
@@ -441,7 +436,7 @@ class ResNet_Mix_VAE(VAutoEncoder):
 
         return out, mu, log_sigma
     
-    def generate_sample(self, y, save_folder):
+    def generate_sample(self, y, save_folder, time):
         self.eval()
         z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(self.device)
         y = y.unsqueeze(0).to(self.device)
@@ -451,9 +446,8 @@ class ResNet_Mix_VAE(VAutoEncoder):
         with torch.no_grad():
             image_generated = self.decoder(torch.cat([z,y_decoder], dim=1))
         
-        label_str = '_'.join(str(int(v)) for v in y.squeeze(0).tolist())
         os.makedirs(save_folder, exist_ok=True)
 
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
+        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)

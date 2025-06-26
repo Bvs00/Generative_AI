@@ -35,5 +35,7 @@ if __name__ == "__main__":
     print(Fore.YELLOW + "Generating samples...")
     for bits in product([0, 1], repeat=3):
         y = torch.tensor(bits, dtype=torch.float)
-        model.generate_sample(y, save_folder=args.save_folder)
+        label_str = '_'.join(str(int(v)) for v in y.tolist())
+        for time in range(20):
+            model.generate_sample(y, save_folder=f"{args.save_folder}/{label_str}", time=time)
     print(Fore.GREEN + "Samples generated successfully")
