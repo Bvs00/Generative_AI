@@ -12,7 +12,7 @@ TRAINING:
   LR: 0.001 # 1e-3
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 1.0 # beta for VAE loss
+  BETA: 8.0 # beta for VAE loss
 
   WITH_AUGMENTATION: False # aug
 

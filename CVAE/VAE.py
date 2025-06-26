@@ -9,30 +9,40 @@ from cbam import CBAM
 import cv2
 from torchvision.models import resnet18, densenet121
 
+######### LOSS ############
+class VAELoss(nn.Module):
+    def __init__(self, beta=1.0):
+        super(VAELoss, self).__init__()
+        self.beta = beta
+        self.reconstruction_loss_function = nn.BCELoss(reduction='sum')
+
+    def kl_loss_function(self, mu, log_sigma):
+        log_sigma_2 = 2*log_sigma
+        kl = 0.5*(mu**2+torch.exp(log_sigma_2)-1-log_sigma_2)
+        return torch.sum(kl)
+
+    def forward(self, reconstructed, original, mu, log_sigma):
+        return self.reconstruction_loss_function(reconstructed, original) + \
+            self.beta*self.kl_loss_function(mu, log_sigma)
+
 class VAutoEncoder(nn.Module):
     "Assumes that the input images are 64x64"
-    def __init__(self, latent_size):
+    def __init__(self, architecture_yaml, info_yaml):
         #latent_size=128, encoder_channel_progression=[32, 64, 128, 128], decoder_channel_progression=[128, 128, 64, 32]):
         super().__init__()
+
+        self.num_epochs = info_yaml["TRAINING"]["NUM_EPOCHS"]
+        self.latent_size = architecture_yaml["LATENT_SIZE"]
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.latent_size=latent_size
         self.encoder=self.build_encoder()
         self.decoder=self.build_decoder()
+
+        self.criterion = VAELoss(beta=info_yaml["TRAINING"]["BETA"])
+        self.optimizer = torch.optim.AdamW(self.parameters(), lr=info_yaml["TRAINING"]["LR"])
  
+    @abstractmethod
     def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
-        mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
-        log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
-        y=self.decoder(torch.cat([z,y], dim=1))
-        return y, mu, log_sigma
- 
-    def encode_mu(self, x):
-        out=self.encoder(x)
-        mu=out[:, :self.latent_size]
-        return mu
+        raise NotImplementedError("Must be implemented in subclass")
  
     @abstractmethod
     def build_encoder(self):
@@ -56,31 +66,60 @@ class VAutoEncoder(nn.Module):
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(save_folder, f'generated_{label_str}.png'), img_bgr)
         
-
-    def train_one_epoch(self, criterion, optimizer, train_loader):
+    def train_one_epoch(self, train_loader):
         average_loss = 0.0
         for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             x_batch = x_batch.to(self.device)
             label_batch = label_batch.to(self.device)
             
             output, mu, log_sigma = self.forward(x_batch, label_batch)
             
-            loss = criterion(output, x_batch, mu, log_sigma)
+            loss = self.criterion(output, x_batch, mu, log_sigma)
             
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
             
             average_loss += loss
         return average_loss
+
+    def training_epoch(self, dataloader):
+        start_epoch = 0
+        list_loss_train = []
+        self.train()
+
+        if self.checkpoint_path and os.path.exists(self.checkpoint_path):
+            checkpoint = torch.load(self.checkpoint_path)
+
+            self.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            start_epoch = checkpoint['epoch']
+            list_loss_train = checkpoint['list_loss_train']
+            print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
+        
+        for epoch in range(start_epoch, self.num_epochs, 1):
+            average_loss = self.train_one_epoch(self.criterion, self.optimizer, dataloader)
+
+            print(f"Epoch {epoch+1} completed. Average loss = {average_loss/(len(dataloader)*1000)}")
+            list_loss_train.append(average_loss/len(dataloader))
+            
+            checkpoint = {
+                'epoch': epoch+1,
+                'model_state_dict': self.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'list_loss_train': list_loss_train,
+            }
+            torch.save(checkpoint, self.checkpoint_path)
+
+        print("FINISH TRANING")
     
 
 class BaselineVAE(VAutoEncoder):
-    def __init__(self, architecture_yaml):
+    def __init__(self, architecture_yaml, info_yaml):        
         self.latent_size = architecture_yaml['LATENT_SIZE']
         self.encoder_channel_progression = architecture_yaml['ENCODER_CHANNEL_PROGRESSION']
         self.decoder_channel_progression = architecture_yaml['DECODER_CHANNEL_PROGRESSION']
-        super().__init__(self.latent_size)
+        super().__init__(architecture_yaml, info_yaml)
 
     def build_encoder(self):
         model=nn.Sequential()
@@ -120,6 +159,16 @@ class BaselineVAE(VAutoEncoder):
         model.append(nn.Conv2d(k, 3, 3, padding='same'))
         model.append(nn.Sigmoid())
         return model
+
+    def forward(self, x, y):
+        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+        out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
+        mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
+        log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
+        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
+        y=self.decoder(torch.cat([z,y], dim=1))
+        return y, mu, log_sigma
     
 
 class ResidualBlock(nn.Module):
@@ -148,13 +197,13 @@ class ResidualBlock(nn.Module):
         return self.relu(out + identity)
 
 class Res_VAE(VAutoEncoder):
-    def __init__(self, architecture_yaml):
+    def __init__(self, architecture_yaml, info_yaml):
 
         self.latent_size = architecture_yaml['LATENT_SIZE']
         self.img_channels=3 
         
         self.cond_dim= self.latent_size // 4  # Dimensione della condizione
-        super().__init__(self.latent_size)
+        super().__init__(architecture_yaml, info_yaml)
         self.cond_latent_proj = nn.Linear(3, self.cond_dim)  # Proiezione della condizione
 
     def build_encoder(self):
@@ -249,11 +298,11 @@ class Res_VAE(VAutoEncoder):
 ###### ResNetVAE
 
 class ResNetVAE(VAutoEncoder):
-    def __init__(self, architecture_yaml):
+    def __init__(self, architecture_yaml, info_yaml):
 
         self.latent_size = architecture_yaml['LATENT_SIZE']
         self.img_channels=3 
-        super().__init__(self.latent_size)  # Proiezione della condizione
+        super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
         self.fc_mu = nn.Linear(512, self.latent_size)
         self.fc_log_var = nn.Linear(512, self.latent_size)
         self.fc_decoder = nn.Linear(self.latent_size + 3, 512 * 4 * 4)
@@ -303,12 +352,12 @@ class ResNetVAE(VAutoEncoder):
 
 ##### resnet custom
 class ResNet_Mix_VAE(VAutoEncoder):
-    def __init__(self, architecture_yaml):
+    def __init__(self, architecture_yaml, info_yaml):
 
         self.latent_size = architecture_yaml['LATENT_SIZE']
         self.img_channels=3 
         self.cond_dim = self.latent_size
-        super().__init__(self.latent_size)  # Proiezione della condizione
+        super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
         self.fc_mu = nn.Linear(512, self.latent_size)
         self.fc_log_var = nn.Linear(512, self.latent_size)
         self.cond_latent = nn.Embedding(8, self.cond_dim).to(self.device)  # Embedding per le 8 classi condizionali
