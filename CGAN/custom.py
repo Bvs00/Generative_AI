@@ -3,7 +3,7 @@ import yaml
 import torch
 import torch.nn as nn
 from torchvision.transforms import v2
-import VAE
+import GAN
 
 
 def training_hp():
@@ -18,9 +18,9 @@ def training_hp():
     CHECKPOINT_FOLDER = config["MODEL"]["CHECKPOINT_FOLDER"]
     RESUME_FROM_CHECKPOINT = config["MODEL"]["RESUME_FROM_CHECKPOINT"]
 
-    LR = config["TRAINING"]["LR"]
+    LR_GEN = config["TRAINING"]["GENERATOR"]["LR"]
+    LR_DISC = config["TRAINING"]["DISCRIMINATOR"]["LR"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
-    BETA = config["TRAINING"]["BETA"]
 
     ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
     
@@ -49,14 +49,14 @@ def training_hp():
         arch_config = yaml.safe_load(f)
 
     # Model instance
-    model_class = getattr(VAE, arch_config["CLASS_NAME"])
+    model_class = getattr(GAN, arch_config["CLASS_NAME"])
     model = model_class(arch_config, config)
 
     for param in model.parameters(): 
         param.requires_grad = True
 
     LATENT_SIZE = arch_config["LATENT_SIZE"]
-    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth")
+    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_g_{LR_GEN}_d_{LR_DISC}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
     if os.path.exists(checkpoint_path) and RESUME_FROM_CHECKPOINT:
         print(f"Resuming from checkpoint: {checkpoint_path}")
     elif not os.path.exists(checkpoint_path):
@@ -81,7 +81,7 @@ def test_hp():
         arch_config = yaml.safe_load(f)
 
     # Model instance
-    model_class = getattr(VAE, arch_config["CLASS_NAME"])
+    model_class = getattr(GAN, arch_config["CLASS_NAME"])
     model = model_class(arch_config, config)
 
     for param in model.parameters(): 

@@ -4,7 +4,7 @@ MODEL:
   TYPE: "CGAN"
   NAME: "baseline_CGAN" # base name used to save the model
   CHECKPOINT_FOLDER: "./CGAN/checkpoints"
-  ARCHITECTURE_YAML_NAME: baseline_CGAN.yaml
+  ARCHITECTURE_YAML_NAME: baseline.yaml
   RESUME_FROM_CHECKPOINT: False
 
 TRAINING:
@@ -13,7 +13,7 @@ TRAINING:
   NUM_WORKERS: 10
   LABEL_SMOOTHING: 0.0
   WITH_AUGMENTATION: False # aug
-  GENRATOR:
+  GENERATOR:
     LR: 0.001 # 1e-3
   DISCRIMINATOR: 
     LR: 0.001 # 1e-3

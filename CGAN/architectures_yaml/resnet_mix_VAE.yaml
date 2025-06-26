@@ -1,3 +1,0 @@
-  ##### HP SPECIFIC TO BASELINE #####
-  CLASS_NAME: ResNet_Mix_VAE
-  LATENT_SIZE: 128

@@ -26,7 +26,6 @@ if __name__ == '__main__':
     with open(os.path.join(args.relative_path,"train_params.yaml"), "r") as f:
         config = yaml.safe_load(f)
 
-    TEST_ONLY = config["TRAINING"]["TEST_ONLY"]
     DATASET_PATH = config["DATASET_PATH"]
 
 

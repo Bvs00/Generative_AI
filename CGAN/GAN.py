@@ -17,9 +17,8 @@ class Generator(nn.Module):
     def __init__(self, latent_size, lr):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.latent_size=latent_size
-        self.model=self.build_generator()
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr)
+        self.latent_size = latent_size
+        self.lr_gen = lr
     
     def gen_loss_function(self, d_synth):
         t_synth=torch.ones_like(d_synth)
@@ -39,7 +38,7 @@ class Discriminator(nn.Module):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.label_smoothing = label_smoothing
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr)
+        self.lr_disc = lr
     
     def disc_loss_function(self, d_true,d_synth):
         t_true=torch.ones_like(d_true) - self.label_smoothing
@@ -63,19 +62,13 @@ class GAN(nn.Module):
         self.architecture_yaml=architecture_yaml
         self.train_yaml=train_yaml
         
-        # Load the configuration file
-        with open(self.architecture_yaml, "r") as f:
-            self.arch_config = yaml.safe_load(f)
-        with open(self.train_yaml, "r") as f:
-            self.param_config = yaml.safe_load(f)
-        
-        self.latent_size = self.arch_config["LATENT_SIZE"]
-        self.label_smoothing = self.param_config["TRAINING"]["LABEL_SMOOTHING"]
-        self.lr_gen = self.param_config["TRAINING"]["GENERATOR"]["LR"]
-        self.lr_disc = self.param_config["TRAINING"]["DISCRIMINATOR"]["LR"]
-        self.num_epochs = self.param_config["TRAINING"]["NUM_EPOCHS"]
+        self.latent_size = self.architecture_yaml["LATENT_SIZE"]
+        self.label_smoothing = self.train_yaml["TRAINING"]["LABEL_SMOOTHING"]
+        self.lr_gen = self.train_yaml["TRAINING"]["GENERATOR"]["LR"]
+        self.lr_disc = self.train_yaml["TRAINING"]["DISCRIMINATOR"]["LR"]
+        self.num_epochs = self.train_yaml["TRAINING"]["NUM_EPOCHS"]
     
-    def train(self, checkpoint_path, dataloader):
+    def training_epoch(self, checkpoint_path, dataloader):
         self.generator.model.train()
         self.discriminator.model.train()
         disc_optimizer, gen_optimizer = self.discriminator.optimizer, self.generator.optimizer
@@ -83,6 +76,7 @@ class GAN(nn.Module):
         list_loss_discriminator = []
         list_sum_dtrue = []
         list_sum_dsynth = []
+        start_epoch=0
         
         if checkpoint_path and os.path.exists(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
@@ -126,12 +120,14 @@ class GAN(nn.Module):
         sum_dsynth = 0.0
         batches = 0
         disc_optimizer, gen_optimizer = self.discriminator.optimizer, self.generator.optimizer
+        # for x_true, cls in tqdm(dataloader):
         for x_true, cls in dataloader:
             x_true=x_true.to(self.device)
-            d_true=self.discriminator.model(x_true, cls)
+            cls = cls.to(self.device)
+            d_true=self.discriminator(x_true, cls)
             z=torch.randn(x_true.shape[0], self.latent_size, device=self.device)
-            x_synth=self.generator.model(z, cls)
-            d_synth = self.discriminator.model(x_synth, cls)
+            x_synth=self.generator(z, cls)
+            d_synth = self.discriminator(x_synth, cls)
 
             # update the discriminator
             disc_optimizer.zero_grad()
@@ -140,7 +136,7 @@ class GAN(nn.Module):
             disc_optimizer.step()
 
             #update the generator
-            d_synth=self.discriminator.model(x_synth, cls)
+            d_synth=self.discriminator(x_synth, cls)
             gen_optimizer.zero_grad()
             gloss=self.generator.gen_loss_function(d_synth)
             gloss.backward()
@@ -158,16 +154,18 @@ class GAN(nn.Module):
 class BaselineGAN(GAN):
     def __init__(self, architecture_yaml, train_yaml):
         super().__init__(architecture_yaml, train_yaml)
-        self.generator_channel_progression = self.arch_config['GENERATOR_CHANNEL_PROGRESSION']
-        self.discriminator_channel_progression = self.arch_config['DISCRIMINATOR_CHANNEL_PROGRESSION']
-        self.discriminator = BaselineDiscriminator(self.discriminator_channel_progression)
+        self.generator_channel_progression = self.architecture_yaml['GENERATOR_CHANNEL_PROGRESSION']
+        self.discriminator_channel_progression = self.architecture_yaml['DISCRIMINATOR_CHANNEL_PROGRESSION']
+        self.discriminator = BaselineDiscriminator(self.discriminator_channel_progression, self.label_smoothing, self.lr_disc)
+        self.generator = BaselineGenerator(self.generator_channel_progression, self.latent_size, self.lr_gen)
         
 
 class BaselineDiscriminator(Discriminator):
-    def __init__(self, discriminator_channel_progression):
-        super().__init__()
+    def __init__(self, discriminator_channel_progression, label_smoothing, lr_disc):
+        super().__init__(label_smoothing, lr_disc)
         self.discriminator_channel_progression=discriminator_channel_progression
         self.model=self.build_discriminator()
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr_disc)
 
         
     def build_discriminator(self):
@@ -203,10 +201,11 @@ class BaselineDiscriminator(Discriminator):
         
     
 class BaselineGenerator(Generator):
-    def __init__(self, generator_channel_progression):
-        super().__init__()
+    def __init__(self, generator_channel_progression, latent_size, lr_gen):
+        super().__init__(latent_size, lr_gen)
         self.generator_channel_progression=generator_channel_progression
         self.model=self.build_generator()
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr_gen)
 
     def build_generator(self):
         model=nn.Sequential()

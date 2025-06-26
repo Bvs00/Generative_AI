@@ -171,15 +171,6 @@ class BaselineVAE(VAutoEncoder):
         y=self.decoder(torch.cat([z,y], dim=1))
         return y, mu, log_sigma
     
-    def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
-        mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
-        log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
-        y=self.decoder(torch.cat([z,y], dim=1))
-        return y, mu, log_sigma
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels=None, stride=1):
