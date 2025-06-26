@@ -21,6 +21,7 @@ def training_hp():
     LR_GEN = config["TRAINING"]["GENERATOR"]["LR"]
     LR_DISC = config["TRAINING"]["DISCRIMINATOR"]["LR"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
+    LABEL_SMOOTHING = config["TRAINING"]["LABEL_SMOOTHING"]
 
     ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
     
@@ -56,7 +57,7 @@ def training_hp():
         param.requires_grad = True
 
     LATENT_SIZE = arch_config["LATENT_SIZE"]
-    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_g_{LR_GEN}_d_{LR_DISC}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
+    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_g_{LR_GEN}_d_{LR_DISC}_{LABEL_SMOOTHING}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
     if os.path.exists(checkpoint_path) and RESUME_FROM_CHECKPOINT:
         print(f"Resuming from checkpoint: {checkpoint_path}")
     elif not os.path.exists(checkpoint_path):

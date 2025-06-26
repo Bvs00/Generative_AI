@@ -94,6 +94,7 @@ class GAN(nn.Module):
         
         for epoch in range(start_epoch, self.num_epochs, 1):
             loss_generator, loss_discriminator, sum_dtrue, sum_dsynth = self.train_one_epoch(dataloader)
+            print(f'Epoch: {epoch+1}\n\tGLoss: {loss_generator}, DLoss: {loss_discriminator}\n\t\tDTrue: {sum_dtrue}, DSynth: {sum_dsynth}')
             list_loss_generator.append(loss_generator)
             list_loss_discriminator.append(loss_discriminator)
             list_sum_dtrue.append(sum_dtrue)
@@ -147,7 +148,7 @@ class GAN(nn.Module):
             sum_dtrue += d_true.mean().detach().cpu().item()
             sum_dsynth += d_synth.mean().detach().cpu().item()
             batches += 1
-        print(f'GLoss: {sum_gloss/batches}, DLoss: {sum_dloss/batches}, DTrue: {sum_dtrue/batches}, DSynth: {sum_dsynth/batches}')
+        
         return sum_gloss/batches, sum_dloss/batches, sum_dtrue/batches, sum_dsynth/batches
 
 
