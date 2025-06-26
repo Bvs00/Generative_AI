@@ -1,0 +1,43 @@
+nohup: input ignorato
+Not using data augmentation
+Checkpoint not found, will create a new one: ./CVAE/checkpoints/resnet_VAE_0.001_128_512_1.0.pth
+Trainable parameters: 18695235
+Non-trainable parameters: 0.0
+Total parameters: 18695235.0
+Epoch 1 completed. Average loss = 86.27136993408203
+Epoch 2 completed. Average loss = 83.37173461914062
+Epoch 3 completed. Average loss = 82.89486694335938
+Epoch 4 completed. Average loss = 82.63482666015625
+Epoch 5 completed. Average loss = 82.4642333984375
+Epoch 6 completed. Average loss = 82.3429946899414
+Epoch 7 completed. Average loss = 82.24156188964844
+Epoch 8 completed. Average loss = 82.16149139404297
+Epoch 9 completed. Average loss = 82.084716796875
+Epoch 10 completed. Average loss = 82.02149200439453
+Epoch 11 completed. Average loss = 81.96248626708984
+Epoch 12 completed. Average loss = 81.91313171386719
+Epoch 13 completed. Average loss = 81.87450408935547
+Epoch 14 completed. Average loss = 81.844482421875
+Epoch 15 completed. Average loss = 81.81388854980469
+Epoch 16 completed. Average loss = 81.78755950927734
+Epoch 17 completed. Average loss = 81.76283264160156
+Epoch 18 completed. Average loss = 81.73947143554688
+Epoch 19 completed. Average loss = 81.71934509277344
+Epoch 20 completed. Average loss = 81.7042236328125
+Epoch 21 completed. Average loss = 81.68576049804688
+Epoch 22 completed. Average loss = 81.67224884033203
+Epoch 23 completed. Average loss = 81.65970611572266
+Epoch 24 completed. Average loss = 81.64854431152344
+Epoch 25 completed. Average loss = 81.63697814941406
+Epoch 26 completed. Average loss = 81.62439727783203
+Epoch 27 completed. Average loss = 81.61122131347656
+Epoch 28 completed. Average loss = 81.59797668457031
+Epoch 29 completed. Average loss = 81.59166717529297
+Epoch 30 completed. Average loss = 81.5799560546875
+Epoch 31 completed. Average loss = 81.57734680175781
+Epoch 32 completed. Average loss = 81.56472778320312
+Epoch 33 completed. Average loss = 81.55889892578125
+Epoch 34 completed. Average loss = 81.55238342285156
+Epoch 35 completed. Average loss = 81.54522705078125
+Epoch 36 completed. Average loss = 81.53800201416016
+Epoch 37 completed. Average loss = 81.53289794921875

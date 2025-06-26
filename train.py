@@ -12,10 +12,6 @@ import yaml
 import sys
 
 
-def plot_img(img):
-    plt.imshow(img)
-    plt.savefig('prova')
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train the model")
     parser.add_argument("--relative_path", type=str, required=True, 
