@@ -1,0 +1,3 @@
+  ##### HP SPECIFIC TO BASELINE #####
+  CLASS_NAME: baseline_CGAN
+  LATENT_SIZE: 256
