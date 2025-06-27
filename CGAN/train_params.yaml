@@ -2,9 +2,9 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "CGAN"
-  NAME: "baseline_CGAN" # base name used to save the model
+  NAME: "resnet_CGAN" # base name used to save the model
   CHECKPOINT_FOLDER: "./CGAN/checkpoints"
-  ARCHITECTURE_YAML_NAME: baseline.yaml
+  ARCHITECTURE_YAML_NAME: resnet_gan.yaml
   RESUME_FROM_CHECKPOINT: True
 
 TRAINING:
@@ -21,6 +21,6 @@ TRAINING:
 
 TEST_ONLY: False
 
-DATASET_PATH: "/mnt/datasets/eeg/celeba/" # MATTIA DATASET PATH
+DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CGAN/Results"

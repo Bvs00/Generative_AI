@@ -51,13 +51,13 @@ def training_hp():
         arch_config = yaml.safe_load(f)
 
     # Model instance
-    model_class = getattr(GAN, arch_config["CLASS_NAME"])
+    model_class = getattr(GAN, arch_config["COMMON_CLASS_NAME"])
     model = model_class(arch_config, config)
 
     for param in model.parameters(): 
         param.requires_grad = True
 
-    LATENT_SIZE = arch_config["LATENT_SIZE"]
+    LATENT_SIZE = arch_config["GENERATOR"]["LATENT_SIZE"]
     checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_g_{LR_GEN}_d_{LR_DISC}_{LABEL_SMOOTHING}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
     if os.path.exists(checkpoint_path) and RESUME_FROM_CHECKPOINT:
         print(f"Resuming from checkpoint: {checkpoint_path}")
@@ -83,12 +83,12 @@ def test_hp(cp_path):
         arch_config = yaml.safe_load(f)
 
     # Model instance
-    model_class = getattr(GAN, arch_config["CLASS_NAME"])
-    model = model_class(arch_config, config)
+    model_class = getattr(GAN, arch_config["COMMON_CLASS_NAME"])
+    model = model_class(arch_config, config).generator
 
-    for param in model.generator.model.parameters(): 
+    for param in model.parameters(): 
         param.requires_grad = False
     
-    model.generator.model.load_state_dict(torch.load(cp_path)['model_state_dict_generator'])
+    model.load_state_dict(torch.load(cp_path)['model_state_dict_generator'])
 
     return model

@@ -370,7 +370,6 @@ class ResNet_Mix_VAE(VAutoEncoder):
         self.fc_mu = nn.Linear(512, self.latent_size)
         self.fc_log_var = nn.Linear(512, self.latent_size)
         self.cond_latent = nn.Embedding(8, self.cond_dim).to(self.device)  # Embedding per le 8 classi condizionali
-        self.one_hot_y = torch.eye(8).long().to(self.device)
         self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
 
     def build_encoder(self):
