@@ -66,6 +66,15 @@ def training_hp():
     else:
         assert False, "Checkpoint exists but RESUME_FROM_CHECKPOINT is set to False, please check your configuration."
 
+    trainable_params = torch.sum(torch.tensor(list(p.numel() for p in model.generator.parameters() if p.requires_grad))).item()
+    non_trainable_params = torch.sum(torch.tensor(list(p.numel() for p in model.generator.parameters() if not p.requires_grad))).item()
+    print(f"generator Trainable parameters: {trainable_params}")
+    print(f"generator non Trainable parameters: {non_trainable_params}")
+    trainable_params = torch.sum(torch.tensor(list(p.numel() for p in model.discriminator.parameters() if p.requires_grad))).item()
+    non_trainable_params = torch.sum(torch.tensor(list(p.numel() for p in model.discriminator.parameters() if not p.requires_grad))).item()
+    print(f"discriminator Trainable parameters: {trainable_params}")
+    print(f"discriminator non Trainable parameters: {non_trainable_params}")
+
     return checkpoint_path, model, BATCH_SIZE, NUM_WORKERS, custom_transforms
 
 

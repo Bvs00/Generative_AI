@@ -189,8 +189,10 @@ class BaselineDiscriminator(Discriminator):
         size=64    # size identifica la dimensione dell'immagine di input (celebA è 64)
         for k in self.discriminator_channel_progression:
             model.append(nn.Conv2d(prev, k, 3, padding='same'))
+            nn.BatchNorm2d(k),
             model.append(nn.LeakyReLU())
             model.append(nn.Conv2d(k, k, 3, stride=2, padding=1))
+            nn.BatchNorm2d(k),
             model.append(nn.LeakyReLU())
             prev=k
             size=size//2    # al secondo Conv2D viene dimezzata la dimensione di size
