@@ -204,7 +204,7 @@ class BaselineDiscriminator(Discriminator):
         model.append(nn.Linear(features, k))
         model.append(nn.LeakyReLU())
         model.append(nn.Dropout(p=0.3))
-        model.append(nn.Linear(k, 2))
+        model.append(nn.Linear(k, 1))
         model.append(nn.Sigmoid())
         
         # assert size==8
@@ -221,7 +221,7 @@ class BaselineGenerator(Generator):
     def __init__(self, architecture_yaml, train_yaml):
         self.generator_channel_progression=architecture_yaml["GENERATOR"]['CHANNEL_PROGRESSION']
         super().__init__(architecture_yaml, train_yaml)
-        self.cond_latent = nn.Embedding(8, self.latent_size//4).to(self.device)  # Embedding per le 8 classi condizionali
+        self.cond_latent = nn.Embedding(8, self.latent_size//8).to(self.device)  # Embedding per le 8 classi condizionali
         self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
 
     def build_generator(self):
@@ -265,14 +265,16 @@ class BaselineGenerator(Generator):
 ##########################      RESNET GAN  #############################
 class ResNetDiscriminator(Discriminator):
     def __init__(self, label_smoothing, lr_disc):
+        # check if self.initial_channel_dim is already defined (in an inherited class)
+        if 'initial_channel_dim' not in self.__dict__:
+            print("initial_channel_dim not defined, setting to default value of 6")
+            self.initial_channel_dim = 3 + 3  # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
+        
         super().__init__(label_smoothing, lr_disc)
-        self.model=self.build_discriminator()
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr_disc)
-
         
     def build_discriminator(self):
         base_model = resnet18()
-        base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        base_model.conv1=nn.Conv2d(self.initial_channel_dim, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
         return nn.Sequential(
             nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
             nn.AdaptiveAvgPool2d((1, 1)),
@@ -280,7 +282,7 @@ class ResNetDiscriminator(Discriminator):
             nn.Linear(512, 128),
             nn.LeakyReLU(),
             nn.Dropout(0.3),
-            nn.Linear(128,2),
+            nn.Linear(128,1),
             nn.Sigmoid()
         )
 
@@ -288,8 +290,24 @@ class ResNetDiscriminator(Discriminator):
         cond = c.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
         out = self.model(torch.cat([x, cond], dim=1))
         return out
-        
+
+
+class ResNetVDiscriminator(ResNetDiscriminator):
+    def __init__(self, architecture_yaml, train_yaml):
+        self.initial_channel_dim = 3 + 3 + 1     # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
+        super().__init__(architecture_yaml, train_yaml)
     
+    def forward(self, x, c):
+        BATCH_SIZE = x.shape[0]
+        # compute the variance of x pixel by pixel among the batch dimension
+        x_var = torch.var(x, dim=[0, 1], keepdim=True).expand(BATCH_SIZE, -1, -1, -1)  # expand to match the input shape
+        # concatenate the variance channel to the input
+        x = torch.cat([x, x_var], dim=1)
+
+        out = super().forward(x, c)
+        return out
+        
+
 class BasicGenerator(Generator):
     def __init__(self, latent_size, lr_gen):
         super().__init__(latent_size, lr_gen)
@@ -325,21 +343,3 @@ class BasicGenerator(Generator):
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
-
-
-class BaselineVDiscriminator(BaselineDiscriminator):
-    def __init__(self, architecture_yaml, train_yaml):
-        self.discriminator_channel_progression = architecture_yaml["DISCRIMINATOR"]['CHANNEL_PROGRESSION']
-        self.initial_channel_dim = 3 + 3 + 1     # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
-        super().__init__(architecture_yaml, train_yaml)
-
-    def forward(self, x, c):
-        # compute the variance of x pixel by pixel among the batch dimension
-        x_var = torch.var(x, dim=0, keepdim=True)
-        # concatenate the variance channel to the input
-        x = torch.cat([x, x_var], dim=1)
-        # expand the class c to match the input size
-        cond = c.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        # concatenate the class c to the input
-        out = self.model(torch.cat([x, cond], dim=1))
-        return out

@@ -5,4 +5,4 @@
     LATENT_SIZE: 256
     CHANNEL_PROGRESSION: [256, 128, 64, 32]
   DISCRIMINATOR:
-    CLASS_NAME: ResNetDiscriminator
+    CLASS_NAME: ResNetVDiscriminator

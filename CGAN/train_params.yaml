@@ -21,6 +21,6 @@ TRAINING:
 
 TEST_ONLY: False
 
-DATASET_PATH: "/home/pfoggia/GenerativeAI/CELEBA/" # DATASET PATH
+DATASET_PATH: "/localstorage/mmarseglia/" # DATASET PATH
 
 OUTPUT_PATH: "CGAN/Results"
