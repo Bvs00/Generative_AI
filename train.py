@@ -33,6 +33,7 @@ if __name__ == '__main__':
     torch.manual_seed(1)  # Set seed for PyTorch
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     checkpoint_path, model, batch_size, num_workers, custom_transforms = training_hp()
     

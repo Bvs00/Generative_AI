@@ -58,7 +58,9 @@ def training_hp():
         param.requires_grad = True
 
     LATENT_SIZE = arch_config["GENERATOR"]["LATENT_SIZE"]
-    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_g_{LR_GEN}_d_{LR_DISC}_{LABEL_SMOOTHING}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
+    gname = arch_config["GENERATOR"]["CLASS_NAME"]
+    dname = arch_config["DISCRIMINATOR"]["CLASS_NAME"]
+    checkpoint_path = os.path.join(CHECKPOINT_FOLDER, f"{MODEL_NAME}_gname_{gname}_dname_{dname}_glr_{LR_GEN}_dlr_{LR_DISC}_{LABEL_SMOOTHING}_{BATCH_SIZE}_{LATENT_SIZE}.pth")
     if os.path.exists(checkpoint_path) and RESUME_FROM_CHECKPOINT:
         print(f"Resuming from checkpoint: {checkpoint_path}")
     elif not os.path.exists(checkpoint_path):

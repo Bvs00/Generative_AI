@@ -14,13 +14,13 @@ TRAINING:
   LABEL_SMOOTHING: 0.1
   WITH_AUGMENTATION: False # aug
   GENERATOR:
-    LR: 0.001 # 1e-3
+    LR: 0.0002 # 1e-3
   DISCRIMINATOR: 
-    LR: 0.001 # 1e-3
+    LR: 0.00002 # 1e-3
 
 
 TEST_ONLY: False
 
-DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
+DATASET_PATH: "/home/pfoggia/GenerativeAI/CELEBA/" # DATASET PATH
 
 OUTPUT_PATH: "CGAN/Results"

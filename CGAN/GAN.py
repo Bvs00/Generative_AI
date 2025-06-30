@@ -181,23 +181,26 @@ class GAN(nn.Module):
 class BaselineDiscriminator(Discriminator):
     def __init__(self, architecture_yaml, train_yaml):
         self.discriminator_channel_progression = architecture_yaml["DISCRIMINATOR"]['CHANNEL_PROGRESSION']
+        # check if self.initial_channel_dim is already defined (in an inherited class)
+        if 'initial_channel_dim' not in self.__dict__:
+            print("initial_channel_dim not defined, setting to default value of 6")
+            self.initial_channel_dim = 3 + 3  # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
+        self.wh_size = 64    # size identifica la dimensione dell'immagine di input (celebA è 64)
         super().__init__(architecture_yaml, train_yaml)
 
     def build_discriminator(self):
         model=nn.Sequential()
-        prev=3 + 3      # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
-        size=64    # size identifica la dimensione dell'immagine di input (celebA è 64)
         for k in self.discriminator_channel_progression:
-            model.append(nn.Conv2d(prev, k, 3, padding='same'))
+            model.append(nn.Conv2d(self.initial_channel_dim, k, 3, padding='same'))
             nn.BatchNorm2d(k),
             model.append(nn.LeakyReLU())
             model.append(nn.Conv2d(k, k, 3, stride=2, padding=1))
             nn.BatchNorm2d(k),
             model.append(nn.LeakyReLU())
-            prev=k
-            size=size//2    # al secondo Conv2D viene dimezzata la dimensione di size
+            self.initial_channel_dim=k
+            self.wh_size=self.wh_size//2    # al secondo Conv2D viene dimezzata la dimensione di self.wh_size
         model.append(nn.Flatten())
-        features=k*size*size    # numero di features a valle del flatten
+        features=k*2*self.wh_size    # numero di features a valle del flatten
         model.append(nn.Linear(features, k))
         model.append(nn.LeakyReLU())
         model.append(nn.Dropout(p=0.3))
@@ -225,7 +228,7 @@ class BaselineGenerator(Generator):
         model=nn.Sequential()
         size=4
         prev=self.generator_channel_progression[0]
-        model.append(nn.Linear(self.latent_size + self.latent_size//4, (prev//2)*size*size))
+        model.append(nn.Linear(self.latent_size + self.latent_size//8, (prev//2)*size*size))
         model.append(nn.GELU())
         model.append(nn.Linear((prev//2)*size*size, prev*size*size))
         model.append(nn.GELU())
@@ -322,3 +325,21 @@ class BasicGenerator(Generator):
         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
+
+
+class BaselineVDiscriminator(BaselineDiscriminator):
+    def __init__(self, architecture_yaml, train_yaml):
+        self.discriminator_channel_progression = architecture_yaml["DISCRIMINATOR"]['CHANNEL_PROGRESSION']
+        self.initial_channel_dim = 3 + 3 + 1     # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
+        super().__init__(architecture_yaml, train_yaml)
+
+    def forward(self, x, c):
+        # compute the variance of x pixel by pixel among the batch dimension
+        x_var = torch.var(x, dim=0, keepdim=True)
+        # concatenate the variance channel to the input
+        x = torch.cat([x, x_var], dim=1)
+        # expand the class c to match the input size
+        cond = c.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+        # concatenate the class c to the input
+        out = self.model(torch.cat([x, cond], dim=1))
+        return out
