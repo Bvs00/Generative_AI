@@ -6,7 +6,7 @@ import torch
 import sys
 from colorama import Fore, Style, init
 
-
+# python image_generation.py --relative_path ../Generative_AI/GUIDED-DIFFUSION --cp_path "/user/mmarseglia/GenAI/Generative_AI/GUIDED-DIFFUSION/checkpoints/baseline_archname_Network_lr_0.001_128_64_[32, 64, 128, 256]_1000.pth" --save_folder ./Image_Generated/GUIDED-DIFFUSION --sample_per_class 20
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
     parser.add_argument("--relative_path", type=str, required=True, 
