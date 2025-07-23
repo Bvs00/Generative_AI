@@ -87,6 +87,7 @@ def test_hp(cp_path):
     with open(os.path.join(current_dir, "train_params.yaml"), "r") as f:
         config = yaml.safe_load(f)
 
+    MODEL_TYPE = config["MODEL"]["TYPE"]
     ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
     
     # Load the configuration file
@@ -102,4 +103,4 @@ def test_hp(cp_path):
     
     model.load_state_dict(torch.load(cp_path)['model_state_dict_generator'])
 
-    return model
+    return model, MODEL_TYPE

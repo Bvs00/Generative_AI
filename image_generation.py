@@ -27,18 +27,28 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(Fore.YELLOW + "Loading model...")
-    model = test_hp(args.cp_path)
+    model, model_type = test_hp(args.cp_path)
 
     # model.load_state_dict(torch.load(args.cp_path)['model_state_dict'])
     model.to(device)
 
     #print colored text
     print(Fore.GREEN + "Model loaded successfully")
+    print("evaluating: " + model_type)
     print(Fore.YELLOW + "Generating samples...")
+    if model_type == "DModel":
+        lambda_values = [0.5, 1, 2, 3]
+
     for bits in product([0, 1], repeat=3):
         y = torch.tensor(bits, dtype=torch.float)
         label_str = '_'.join(str(int(v)) for v in y.tolist())
         for time in range(args.sample_per_class):
-            os.makedirs(args.save_folder, exist_ok=True)
-            model.generate_sample(y, save_folder=f"{args.save_folder}/{label_str}", time=time)
+            if model_type == "DModel":
+                for lambda_v in lambda_values:
+                    lambda_save_folder = f"{args.save_folder}/lambda_{lambda_v}"
+                    os.makedirs(args.save_folder, exist_ok=True)
+                    model.generate_sample(y, save_folder=f"{lambda_save_folder}/{label_str}", time=time, lam=lambda_v)
+            else:
+                os.makedirs(args.save_folder, exist_ok=True)
+                model.generate_sample(y, save_folder=f"{args.save_folder}/{label_str}", time=time)
     print(Fore.GREEN + "Samples generated successfully")

@@ -4,8 +4,17 @@ import math
 import os
 import yaml
 import cv2
-
+from cbam import CBAM
+from tqdm import tqdm
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Function to check if a file whose name contains base_filename exists in folder
+def find_matching_checkpoint(checkpoint_folder, base_filename):
+    for fname in os.listdir(checkpoint_folder):
+        name, ext = os.path.splitext(fname)
+        if base_filename in name:
+            return os.path.join(checkpoint_folder, fname)
+    return None
 
 class NoiseSchedule:
     def __init__(self, L, s=0.008):
@@ -82,9 +91,14 @@ class UNetBlock(nn.Module):
 
       def build_encoder(self, from_features, to_features):
           model=nn.Sequential(
+                  nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
+                  nn.BatchNorm2d(from_features),
+                  nn.ReLU(),
+                  CBAM(from_features),  # Attention module
                   nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
                   nn.BatchNorm2d(from_features),
                   nn.ReLU(),
+                  CBAM(from_features),  # Attention module
                   nn.Conv2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
                   nn.BatchNorm2d(to_features),
                   nn.ReLU()
@@ -93,9 +107,14 @@ class UNetBlock(nn.Module):
 
       def build_decoder(self, from_features, to_features):
           model=nn.Sequential(
+                  nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
+                  nn.BatchNorm2d(from_features),
+                  nn.ReLU(),
+                  CBAM(from_features),  # Attention module  
                   nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
                   nn.BatchNorm2d(from_features),
                   nn.ReLU(),
+                  CBAM(from_features),  # Attention module                
                   nn.ConvTranspose2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
                   nn.BatchNorm2d(to_features),
                   nn.ReLU()
@@ -119,6 +138,7 @@ class Network(nn.Module):
         self.time_encodig_size = self.architecture_yaml["TIME_ENCODING_SIZE"]
         self.time_encoding=TimeEncoding(self.L, self.time_encodig_size)
         self.feat_list = self.architecture_yaml["FEAT_LIST"]
+        self.scheduleType = self.train_yaml["TRAINING"].get("SCHEDULE_TYPE", None)
 
         self.pre=nn.Sequential(
             nn.Conv2d(3, self.feat_list[0], 3, padding='same'),
@@ -128,15 +148,26 @@ class Network(nn.Module):
             nn.ReLU(),
             nn.Conv2d(self.feat_list[0], 3, 3, padding='same'))
         
-        # training parameters
-        self.noise_schedule=NoiseSchedule(self.L)
-        self.loss_function=nn.MSELoss()
-        self.optimizer=torch.optim.AdamW(self.parameters(), lr=self.train_yaml["TRAINING"]["LR"])
         self.image_dimensions=(1,1,1)
 
         self.cond_one_hot=torch.eye(self.cond_shape[0], device=device)
         self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
+        print("Network initialized correctly.")
 
+    def set_trining_parameters(self):
+        # training parameters
+        self.noise_schedule=NoiseSchedule(self.L)
+        self.loss_function=nn.MSELoss()
+        lr = self.train_yaml["TRAINING"]["LR"]
+        self.optimizer=torch.optim.AdamW(self.parameters(), lr=lr)
+        if self.scheduleType != None:
+            if self.scheduleType == "StepLR":
+                self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.1)
+            elif self.scheduleType == "CyclicLR":
+                self.scheduler = torch.optim.lr_scheduler.CyclicLR(self.optimizer, base_lr=lr*0.01, max_lr=lr)
+            print(f"Using schedule type: {self.scheduleType}")
+
+    
     def forward(self, x, t, cond):
         enc=self.time_encoding[t]
         x=self.pre(x)
@@ -155,17 +186,27 @@ class Network(nn.Module):
         self.train()
         list_loss = []
         start_epoch=0
-        
-        if checkpoint_path and os.path.exists(checkpoint_path):
-            checkpoint = torch.load(checkpoint_path)
+        print("START TRAINING")
+        existing_checkpoint = None
+        checkpoint_filename, _ = os.path.splitext(os.path.basename(checkpoint_path))
+        checkpoint_folder = os.path.dirname(checkpoint_path)
+        existing_checkpoint = find_matching_checkpoint(checkpoint_folder, checkpoint_filename)
+
+        if existing_checkpoint:
+            checkpoint = torch.load(existing_checkpoint, map_location=device)
 
             self.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            if self.scheduleType is not None:
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            else:
+                self.scheduler = None
             start_epoch = checkpoint['epoch']
             list_loss = checkpoint['list_loss']
+            print(f"Checkpoint path: {existing_checkpoint}")
             print(f"Riprendo l'addestramento da epoca {start_epoch+1}...")
         
-        for epoch in range(start_epoch, self.num_epochs, 1):
+        for epoch in range(start_epoch, start_epoch + self.num_epochs, 1):
             loss = self.train_one_epoch(dataloader)
             print(f'Epoch: {epoch+1}\n\tLoss: {loss}')
             list_loss.append(loss)
@@ -176,16 +217,33 @@ class Network(nn.Module):
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'list_loss': list_loss,
             }
-            os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-            torch.save(checkpoint, checkpoint_path)
+            if self.scheduleType is not None:
+                checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
+
+
+            # Split the base path into directory, filename, and extension
+            base_dir = os.path.dirname(checkpoint_path)
+            base_name = os.path.basename(checkpoint_path)
+            name, ext = os.path.splitext(base_name)
+            
+            os.makedirs(base_dir, exist_ok=True)
+
+            # Build epoch-specific checkpoint filenames
+            current_checkpoint = os.path.join(base_dir, f"{name}_epoch_{epoch + 1}{ext}")
+            previous_checkpoint = os.path.join(base_dir, f"{name}_epoch_{epoch}{ext}")
+
+            # Remove previous checkpoint if it exists
+            if os.path.exists(previous_checkpoint):
+                os.remove(previous_checkpoint)
+
+            torch.save(checkpoint, current_checkpoint)
         print("FINISH TRANING")
 
 
     def train_one_epoch(self, dataloader):
-        epoch_count=0
         self.train()
         average_loss=0.0
-        for x, y in dataloader:
+        for x, y in tqdm(dataloader, dynamic_ncols=True):
             x=x.to(device=device)
             n=x.shape[0] # Minibatch size
             inty = (y.to(device) * self.powers).sum(dim=1).long()
@@ -215,20 +273,22 @@ class Network(nn.Module):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            if self.scheduleType is not None and self.scheduleType == "CyclicLR": # in case of cycllic decay, step the scheduler after each batch
+                self.scheduler.step()
             average_loss=0.9*average_loss+0.1*loss.cpu().item()
-        epoch_count += 1
-        print(f'Epoch {epoch_count} completed. Average loss={average_loss}')
+
+        if self.scheduleType is not None and self.scheduleType == "StepLR": # in case of step decay, step the scheduler after each epoch
+            self.scheduler.step()
         return average_loss
     
     
-    def generate_sample(self, y, save_folder, time, lam=0.5):
+    def generate_sample(self, y, save_folder, time, lam=1.5):
         self.eval()
         with torch.no_grad():
             z=torch.randn(1, *(3,64,64), device=device)
             inty = (y.to(device) * self.powers).sum(dim=0).long()
             cond=self.cond_one_hot[inty]
             cond0=torch.zeros_like(cond)
-            self.eval()
             for kt in reversed(range(self.L)):
                 t=torch.tensor(kt).view(1)
 

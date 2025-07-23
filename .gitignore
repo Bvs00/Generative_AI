@@ -23,3 +23,8 @@ CVAE/train_params.yaml
 
 # test generation folder
 Image_Generated/
+
+# logs
+*.log
+# But keep .log files inside the training_procedures folder
+!*/training_procedures/*.log

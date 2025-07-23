@@ -1,0 +1,10 @@
+Using device: cuda
+Not using data augmentation
+Using schedule type: StepLR
+Checkpoint not found, will create a new one: ./GUIDED-DIFFUSION/checkpoints/baseline_archname_Network_lr_0.01_128_64_[32, 64, 128, 256]_1000_StepLR.pth
+generator Trainable parameters: 3462051
+generator non Trainable parameters: 0.0
+Trainable parameters: 3462051
+Non-trainable parameters: 0.0
+Total parameters: 3462051.0
+slurmstepd: error: *** JOB 76046 ON gnode02 CANCELLED AT 2025-07-21T04:19:14 DUE TO TIME LIMIT ***
