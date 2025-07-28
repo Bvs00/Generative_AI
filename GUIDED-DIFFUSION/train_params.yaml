@@ -2,16 +2,16 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "DModel" # Model type
-  NAME: "baseline_up" # base name used to save the model
+  NAME: "UNet_advanced_new" # base name used to save the model
   CHECKPOINT_FOLDER: "./GUIDED-DIFFUSION/checkpoints"
-  ARCHITECTURE_YAML_NAME: baseline.yaml
+  ARCHITECTURE_YAML_NAME: UNet_advanced.yaml
   RESUME_FROM_CHECKPOINT: True
 
 TRAINING:
   BATCH_SIZE: 128
   NUM_EPOCHS: 1000
-  LR: 0.0001 # 1e-3
-  # SCHEDULE_TYPE: "CyclicLR" # "CyclicLR" or "StepLR" COMMENT IF DON'T WANT SCHEDULER
+  LR: 0.0001 # 1e-4
+  # SCHEDULE_TYPE: "StepLR" # "CyclicLR" or "StepLR" COMMENT IF DON'T WANT SCHEDULER
   L: 1000
   COND_SHAPE: [8] # vecotor with 1 for each condition (barba, occhiali, genere)
   NUM_WORKERS: 10

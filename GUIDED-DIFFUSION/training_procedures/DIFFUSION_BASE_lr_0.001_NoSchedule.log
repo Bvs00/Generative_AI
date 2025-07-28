@@ -1,9 +1,0 @@
-Using device: cuda
-Not using data augmentation
-Checkpoint not found, will create a new one: ./GUIDED-DIFFUSION/checkpoints/baseline_archname_Network_lr_0.001_128_64_[32, 64, 128, 256]_1000_.pth
-generator Trainable parameters: 3462051
-generator non Trainable parameters: 0.0
-Trainable parameters: 3462051
-Non-trainable parameters: 0.0
-Total parameters: 3462051.0
-slurmstepd: error: *** JOB 76047 ON gnode03 CANCELLED AT 2025-07-21T04:20:14 DUE TO TIME LIMIT ***

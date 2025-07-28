@@ -31,7 +31,8 @@ if __name__ == "__main__":
 
     # model.load_state_dict(torch.load(args.cp_path)['model_state_dict'])
     model.to(device)
-
+    
+    print("device: " + device)
     #print colored text
     print(Fore.GREEN + "Model loaded successfully")
     print("evaluating: " + model_type)
@@ -39,16 +40,54 @@ if __name__ == "__main__":
     if model_type == "DModel":
         lambda_values = [0.5, 1, 2, 3]
 
-    for bits in product([0, 1], repeat=3):
+    # for bits in product([0, 1], repeat=3):
+    #     y = torch.tensor(bits, dtype=torch.float)
+    #     label_str = '_'.join(str(int(v)) for v in y.tolist())
+    #     for time in range(args.sample_per_class):
+    #         if model_type == "DModel":
+    #             for lambda_v in lambda_values:
+    #                 lambda_save_folder = f"{args.save_folder}/lambda_{lambda_v}"
+    #                 os.makedirs(args.save_folder, exist_ok=True)
+    #                 model.generate_sample(y, save_folder=f"{lambda_save_folder}/{label_str}", time=time, lam=lambda_v)
+    #         else:
+    #             os.makedirs(args.save_folder, exist_ok=True)
+    #             model.generate_sample(y, save_folder=f"{args.save_folder}/{label_str}", time=time)
+    # print(Fore.GREEN + "Samples generated successfully")
+
+
+    # Prepare full batch of conditions and corresponding save paths
+    condition_list = []
+    save_paths = []
+
+    bit_combinations = list(product([0, 1], repeat=3))
+
+    for bits in bit_combinations:
         y = torch.tensor(bits, dtype=torch.float)
         label_str = '_'.join(str(int(v)) for v in y.tolist())
+
         for time in range(args.sample_per_class):
-            if model_type == "DModel":
-                for lambda_v in lambda_values:
-                    lambda_save_folder = f"{args.save_folder}/lambda_{lambda_v}"
-                    os.makedirs(args.save_folder, exist_ok=True)
-                    model.generate_sample(y, save_folder=f"{lambda_save_folder}/{label_str}", time=time, lam=lambda_v)
-            else:
-                os.makedirs(args.save_folder, exist_ok=True)
-                model.generate_sample(y, save_folder=f"{args.save_folder}/{label_str}", time=time)
+            condition_list.append(y)
+            save_paths.append(f"{args.save_folder}/{label_str}")
+
+    # Stack into full batch tensor
+    y_batch = torch.stack(condition_list)  # Shape: (8 * samples_per_class, 3)
+
+    if model_type == "DModel":
+        for lambda_v in lambda_values:
+            # Optionally modify the save path to include lambda subfolder
+            lambda_save_paths = [
+                path.replace(args.save_folder, os.path.join(str(args.save_folder), f"lambda_{lambda_v}"))
+                for path in save_paths
+            ]
+            for folder in lambda_save_paths:
+                os.makedirs(folder, exist_ok=True)
+            print(Fore.YELLOW + f"Generating samples with lambda = {lambda_v}...")
+            model.generate_sample(y_batch, save_folders=lambda_save_paths, lam=lambda_v)
+    else:
+        # Create folders
+        for path in save_paths:
+            # Ensure the save path exists
+            os.makedirs(path, exist_ok=True)
+        model.generate_sample(y_batch, save_folders=save_paths)
+
     print(Fore.GREEN + "Samples generated successfully")

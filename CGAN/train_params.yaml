@@ -2,21 +2,21 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "CGAN"
-  NAME: "resnet_CGAN_2p_var3_pr_512" # base name used to save the model
+  NAME: "resnet_gan_gimproved_disc_up_CGAN_V_baseline_optimized" # base name used to save the model
   CHECKPOINT_FOLDER: "./CGAN/checkpoints"
-  ARCHITECTURE_YAML_NAME: resnet_gan.yaml
+  ARCHITECTURE_YAML_NAME: resnet_gan_gimproved_disc_up_opt.yaml
   RESUME_FROM_CHECKPOINT: True
 
 TRAINING:
   NUM_EPOCHS: 1000
-  BATCH_SIZE: 256
+  BATCH_SIZE: 512
   NUM_WORKERS: 10
   LABEL_SMOOTHING: 0.1
   WITH_AUGMENTATION: False # aug
   GENERATOR:
-    LR: 0.0001 # 1e-5
+    LR: 0.00005 # 5e-6
   DISCRIMINATOR: 
-    LR: 0.000001 # 1e-6
+    LR: 0.00002 # 2e-6
 
 
 TEST_ONLY: False

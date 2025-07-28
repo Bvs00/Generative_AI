@@ -1,0 +1,6 @@
+  ##### HP SPECIFIC TO BASELINE #####
+  COMMON_CLASS_NAME: Network
+  UNET_BLOCK: UNetBlock_film
+  
+  TIME_ENCODING_SIZE: 64
+  FEAT_LIST: [32, 64, 128, 256, 512]

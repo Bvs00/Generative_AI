@@ -23,6 +23,7 @@ def training_hp():
     L = config["TRAINING"]["L"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
     NUM_WORKERS = config["TRAINING"]["NUM_WORKERS"]
+    scheduleType = config["TRAINING"].get("SCHEDULE_TYPE", "")
 
     ARCHITECTURE_YAML_NAME = config["MODEL"]["ARCHITECTURE_YAML_NAME"]
     
@@ -50,17 +51,16 @@ def training_hp():
     with open(os.path.join(current_dir, "architectures_yaml", ARCHITECTURE_YAML_NAME), "r") as f:
         arch_config = yaml.safe_load(f)
 
+    time_encoding_size = arch_config["TIME_ENCODING_SIZE"]
+    feat_list = arch_config["FEAT_LIST"]
+
     # Model instance
     model_class = getattr(GUIDED_DIFFUSION, arch_config["COMMON_CLASS_NAME"])
     model = model_class(arch_config, config)
     model.set_trining_parameters()
-    time_encoding_size = arch_config["TIME_ENCODING_SIZE"]
-    feat_list = arch_config["FEAT_LIST"]
 
     for param in model.parameters(): 
         param.requires_grad = True
-    
-    scheduleType = config["TRAINING"].get("SCHEDULE_TYPE", "")
 
     # Build the checkpoint filename as before
     checkpoint_filename = f"{MODEL_NAME}_archname_{arch_config['COMMON_CLASS_NAME']}_lr_{LR}_{BATCH_SIZE}_{time_encoding_size}_{feat_list}_{L}_{scheduleType}"
