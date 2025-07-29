@@ -67,7 +67,7 @@ def training_hp():
     return checkpoint_path, model, BATCH_SIZE, custom_transforms
 
 
-def test_hp():
+def test_hp(cp_path):
     # Get the absolute path of the current script
     current_dir = os.path.dirname(os.path.abspath(__file__))
     # Load the configuration file
@@ -87,5 +87,7 @@ def test_hp():
 
     for param in model.parameters(): 
         param.requires_grad = False
+
+    model.load_state_dict(torch.load(cp_path)['model_state_dict'])
 
     return model, MODEL_TYPE
