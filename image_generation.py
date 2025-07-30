@@ -15,7 +15,7 @@ if __name__ == "__main__":
                         help="Path to the model checkpoint file")
     parser.add_argument("--save_folder", type=str, default="./Image_Generated/VAE",
                         help="Path to save the generated samples")
-    parser.add_argument("--sample_per_class", "-s", type=int, default=20,
+    parser.add_argument("--sample_per_class", "-s", type=int, default=24,
                         help="Number of samples to generate per class")
     args = parser.parse_args()
 

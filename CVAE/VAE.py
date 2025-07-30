@@ -276,20 +276,56 @@ class Res_VAE(VAutoEncoder):
 
         return out, mu, log_sigma
     
-    
-    def generate_sample(self, y, save_folder, time):
+    def generate_sample(self, y_batch, save_folders):
         self.eval()
-        z = torch.randn(size=(self.latent_size,))
+        batch_size = y_batch.shape[0]
+        z = torch.randn(batch_size, *(self.latent_size,), device=self.device)
         with torch.no_grad():
             
-            y_proj = self.cond_latent_proj(y.to(self.device))
-            image_generated = self.decoder(torch.cat([z.unsqueeze(0).to(self.device),y_proj.unsqueeze(0).to(self.device)], dim=1))
+            y_proj = self.cond_latent_proj(y_batch.to(self.device))
+            image_generated = self.decoder(torch.cat([z.to(self.device),y_proj.to(self.device)], dim=1))
 
-        os.makedirs(save_folder, exist_ok=True)
+        image_id = 0
+        last_save_folder_path = ""
+        folder_to_images = {}
 
-        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
-        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
+        for img_tensor, folder in zip(image_generated, save_folders):
+            if folder != last_save_folder_path:
+                last_save_folder_path = folder
+                image_id = 0
+            else:
+                image_id += 1
+            os.makedirs(folder, exist_ok=True)
+            img = (img_tensor.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(os.path.join(folder, f'sample_{image_id}.png'), img_bgr)
+
+            # Store RGB image for plotting
+            if folder not in folder_to_images:
+                folder_to_images[folder] = []
+            folder_to_images[folder].append(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+
+        # Create figures per class
+        for folder, images in folder_to_images.items():
+            num_images = len(images)
+            cols = min(8, num_images)
+            rows = (num_images + cols - 1) // cols
+
+            fig, axes = plt.subplots(rows, cols, figsize=(2 * cols, 2 * rows))
+            axes = np.array(axes).reshape(-1)
+
+            for i, img in enumerate(images):
+                axes[i].imshow(img)
+                axes[i].axis('off')
+
+            # Hide unused axes
+            for j in range(i + 1, len(axes)):
+                axes[j].axis('off')
+
+            plt.tight_layout()
+            fig_path = os.path.join(folder, 'summary_grid.png')
+            plt.savefig(fig_path)
+            plt.close(fig)
 
 
 ###### ResNetVAE
