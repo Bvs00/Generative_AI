@@ -66,8 +66,8 @@ class VAutoEncoder(nn.Module):
         
     def train_one_epoch(self, train_loader):
         average_loss = 0.0
-        for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
-        # for x_batch, label_batch in train_loader:
+        # for x_batch, label_batch in tqdm(train_loader, dynamic_ncols=True):
+        for x_batch, label_batch in train_loader:
             self.optimizer.zero_grad()
             x_batch = x_batch.to(self.device)
             label_batch = label_batch.to(self.device)

@@ -19,6 +19,7 @@ def training_hp():
     RESUME_FROM_CHECKPOINT = config["MODEL"]["RESUME_FROM_CHECKPOINT"]
 
     LR = config["TRAINING"]["LR"]
+    NUM_WORKERS = config["TRAINING"]["NUM_WORKERS"]
     BATCH_SIZE = config["TRAINING"]["BATCH_SIZE"]
     BETA = config["TRAINING"]["BETA"]
 
@@ -64,7 +65,7 @@ def training_hp():
     else:
         assert False, "Checkpoint exists but RESUME_FROM_CHECKPOINT is set to False, please check your configuration."
 
-    return checkpoint_path, model, BATCH_SIZE, custom_transforms
+    return checkpoint_path, model, BATCH_SIZE, NUM_WORKERS, custom_transforms
 
 
 def test_hp():

@@ -12,12 +12,12 @@ TRAINING:
   LR: 0.001 # 1e-3
   BATCH_SIZE: 128
   NUM_WORKERS: 10
-  BETA: 8.0 # beta for VAE loss
+  BETA: 0.5 # beta for VAE loss
 
   WITH_AUGMENTATION: False # aug
 
   TEST_ONLY: False
 
-DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
+DATASET_PATH: "/mnt/datasets/eeg/celeba/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"
