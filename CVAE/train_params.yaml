@@ -18,6 +18,6 @@ TRAINING:
 
   TEST_ONLY: False
 
-DATASET_PATH: "/localstorage/mmarseglia/" # MATTIA DATASET PATH
+DATASET_PATH: "/mnt/datasets/eeg/celeba/" # MATTIA DATASET PATH
 
 OUTPUT_PATH: "CVAE/Results"
