@@ -58,7 +58,7 @@ def training_hp():
         param.requires_grad = True
 
     # Freeze layers up to layer2
-    if model.discriminator.resnet_backbone is not None:
+    if hasattr(model.discriminator, "resnet_backbone") and model.discriminator.resnet_backbone is not None:
         print("Freezing layers up to layer2 in the discriminator's resnet backbone")
         for name, param in model.discriminator.resnet_backbone.named_parameters():
             if any(name.startswith(layer) for layer in ['0', '1', '4', '5']):  # conv1, bn1, layer1, layer2

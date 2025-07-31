@@ -381,7 +381,6 @@ class ResNetVDiscriminator_2p(Discriminator):
         out = self.net2(torch.cat([res_out, c_token], dim=1))
         return out
 
-
 class ResNetVDiscriminator(ResNetDiscriminator):
     def __init__(self, architecture_yaml, train_yaml):
         self.initial_channel_dim = 3 + 3 + 3     # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)

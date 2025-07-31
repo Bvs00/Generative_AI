@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from cbam import CBAM
 import cv2
 from torchvision.models import resnet18
+import numpy as np
 
 ######### LOSS ############
 class VAELoss(nn.Module):
@@ -113,61 +114,61 @@ class VAutoEncoder(nn.Module):
         print("FINISH TRANING")
     
 
-class BaselineVAE(VAutoEncoder):
-    def __init__(self, architecture_yaml, info_yaml):        
-        self.latent_size = architecture_yaml['LATENT_SIZE']
-        self.encoder_channel_progression = architecture_yaml['ENCODER_CHANNEL_PROGRESSION']
-        self.decoder_channel_progression = architecture_yaml['DECODER_CHANNEL_PROGRESSION']
-        super().__init__(architecture_yaml, info_yaml)
+# class BaselineVAE(VAutoEncoder):
+#     def __init__(self, architecture_yaml, info_yaml):        
+#         self.latent_size = architecture_yaml['LATENT_SIZE']
+#         self.encoder_channel_progression = architecture_yaml['ENCODER_CHANNEL_PROGRESSION']
+#         self.decoder_channel_progression = architecture_yaml['DECODER_CHANNEL_PROGRESSION']
+#         super().__init__(architecture_yaml, info_yaml)
 
-    def build_encoder(self):
-        model=nn.Sequential()
-        prev=3 + 3      # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
-        size=64    # size identifica la dimensione dell'immagine di input (celebA è 64)
-        for k in self.encoder_channel_progression:
-            model.append(nn.Conv2d(prev, k, 3, padding='same'))
-            model.append(nn.ReLU())
-            model.append(nn.Conv2d(k, k, 3, stride=2, padding=1))
-            model.append(nn.ReLU())
-            prev=k
-            size=size//2    # al secondo Conv2D viene dimezzata la dimensione di size
-        model.append(nn.Flatten())
-        features=k*size*size    # numero di features a valle del flatten
-        model.append(nn.Linear(features, 2*self.latent_size))
-        # assert size==8
-        # assert k==128
-        return model
+#     def build_encoder(self):
+#         model=nn.Sequential()
+#         prev=3 + 3      # prev è il numero di feature maps iniziale (nel caso di condizionale ad 8 classi dobbiamo avere 3-RGB + 3-Classi = 6)
+#         size=64    # size identifica la dimensione dell'immagine di input (celebA è 64)
+#         for k in self.encoder_channel_progression:
+#             model.append(nn.Conv2d(prev, k, 3, padding='same'))
+#             model.append(nn.ReLU())
+#             model.append(nn.Conv2d(k, k, 3, stride=2, padding=1))
+#             model.append(nn.ReLU())
+#             prev=k
+#             size=size//2    # al secondo Conv2D viene dimezzata la dimensione di size
+#         model.append(nn.Flatten())
+#         features=k*size*size    # numero di features a valle del flatten
+#         model.append(nn.Linear(features, 2*self.latent_size))
+#         # assert size==8
+#         # assert k==128
+#         return model
  
-    def build_decoder(self):
-        model=nn.Sequential()
-        size=4
-        prev=128
-        model.append(nn.Linear(self.latent_size + 3, prev*size*size))
-        model.append(nn.ReLU())
-        model.append(nn.Unflatten(1, (prev, size, size)))
-        for k in self.decoder_channel_progression:
-            model.append(nn.Conv2d(prev, k, 3, padding='same'))
-            model.append(nn.ReLU())
-            model.append(nn.ConvTranspose2d(k, k, 3, stride=2, padding=1,
-                                            output_padding=1))
-            model.append(nn.ReLU())
-            prev=k
-            size=size*2
-        # assert size==128
-        # assert k==32
-        model.append(nn.Conv2d(k, 3, 3, padding='same'))
-        model.append(nn.Sigmoid())
-        return model
+#     def build_decoder(self):
+#         model=nn.Sequential()
+#         size=4
+#         prev=128
+#         model.append(nn.Linear(self.latent_size + 3, prev*size*size))
+#         model.append(nn.ReLU())
+#         model.append(nn.Unflatten(1, (prev, size, size)))
+#         for k in self.decoder_channel_progression:
+#             model.append(nn.Conv2d(prev, k, 3, padding='same'))
+#             model.append(nn.ReLU())
+#             model.append(nn.ConvTranspose2d(k, k, 3, stride=2, padding=1,
+#                                             output_padding=1))
+#             model.append(nn.ReLU())
+#             prev=k
+#             size=size*2
+#         # assert size==128
+#         # assert k==32
+#         model.append(nn.Conv2d(k, 3, 3, padding='same'))
+#         model.append(nn.Sigmoid())
+#         return model
 
-    def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
-        mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
-        log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
-        y=self.decoder(torch.cat([z,y], dim=1))
-        return y, mu, log_sigma
+#     def forward(self, x, y):
+#         cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+#         out=self.encoder(torch.cat([x,cond], dim=1))         # l'outpur dell'encoder è 2*LATENT_SIZE
+#         mu=out[:, :self.latent_size]    # da 0 a LATENT_SIZE corrisponde a mu
+#         log_sigma=out[:, self.latent_size:]     # da LATENT_SIZE fino alla fine corrisponde a log_sigma
+#         eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+#         z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente 
+#         y=self.decoder(torch.cat([z,y], dim=1))
+#         return y, mu, log_sigma
     
 
 class ResidualBlock(nn.Module):
@@ -253,7 +254,7 @@ class Res_VAE(VAutoEncoder):
             size *= 2
 
         model.append(nn.Conv2d(prev, 3, kernel_size=3, stride=2, padding=1))
-        model.append(nn.Sigmoid())  # usa Tanh se normalizzi in [-1,1]
+        model.append(nn.Sigmoid()) # output in [0,1]
 
         return model
 
@@ -328,161 +329,161 @@ class Res_VAE(VAutoEncoder):
             plt.close(fig)
 
 
-###### ResNetVAE
+# ###### ResNetVAE
 
-class ResNetVAE(VAutoEncoder):
-    def __init__(self, architecture_yaml, info_yaml):
+# class ResNetVAE(VAutoEncoder):
+#     def __init__(self, architecture_yaml, info_yaml):
 
-        self.latent_size = architecture_yaml['LATENT_SIZE']
-        self.img_channels=3 
-        super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
-        self.fc_mu = nn.Linear(512, self.latent_size)
-        self.fc_log_var = nn.Linear(512, self.latent_size)
-        self.fc_decoder = nn.Linear(self.latent_size + 3, 512 * 4 * 4)
+#         self.latent_size = architecture_yaml['LATENT_SIZE']
+#         self.img_channels=3 
+#         super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
+#         self.fc_mu = nn.Linear(512, self.latent_size)
+#         self.fc_log_var = nn.Linear(512, self.latent_size)
+#         self.fc_decoder = nn.Linear(self.latent_size + 3, 512 * 4 * 4)
 
-    def build_encoder(self):
-        base_model = resnet18()
-        base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        return nn.Sequential(
-            nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-        )
+#     def build_encoder(self):
+#         base_model = resnet18()
+#         base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+#         return nn.Sequential(
+#             nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
+#             nn.AdaptiveAvgPool2d((1, 1)),
+#             nn.Flatten(),
+#         )
         
 
-    def build_decoder(self):
-        return nn.Sequential(
-            nn.ConvTranspose2d(512, 256, 4, 2, 1),  # 8x8
-            nn.BatchNorm2d(256),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(256, 128, 4, 2, 1),  # 16x16
-            nn.BatchNorm2d(128),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(128, 64, 4, 2, 1),  # 32x32
-            nn.BatchNorm2d(64),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(64, 3, 4, 2, 1),  # 64x64
-            nn.Sigmoid()  # output in [0,1]
-        )
+#     def build_decoder(self):
+#         return nn.Sequential(
+#             nn.ConvTranspose2d(512, 256, 4, 2, 1),  # 8x8
+#             nn.BatchNorm2d(256),
+#             nn.ReLU(True),
+#             nn.ConvTranspose2d(256, 128, 4, 2, 1),  # 16x16
+#             nn.BatchNorm2d(128),
+#             nn.ReLU(True),
+#             nn.ConvTranspose2d(128, 64, 4, 2, 1),  # 32x32
+#             nn.BatchNorm2d(64),
+#             nn.ReLU(True),
+#             nn.ConvTranspose2d(64, 3, 4, 2, 1),  # 64x64
+#             nn.Sigmoid()  # output in [0,1]
+#         )
         
 
-    def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        h=torch.cat([x,cond], dim=1)       # l'outpur dell'encoder è 2*LATENT_SIZE
+#     def forward(self, x, y):
+#         cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+#         h=torch.cat([x,cond], dim=1)       # l'outpur dell'encoder è 2*LATENT_SIZE
         
-        out = self.encoder(h)
-        mu = self.fc_mu(out)
-        log_sigma = self.fc_log_var(out)
+#         out = self.encoder(h)
+#         mu = self.fc_mu(out)
+#         log_sigma = self.fc_log_var(out)
         
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
+#         eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+#         z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
         
-        z_decoder = self.fc_decoder(torch.cat([z, y], dim=1)).view(-1, 512, 4, 4)
-        out = self.decoder(z_decoder)
+#         z_decoder = self.fc_decoder(torch.cat([z, y], dim=1)).view(-1, 512, 4, 4)
+#         out = self.decoder(z_decoder)
 
-        return out, mu, log_sigma
+#         return out, mu, log_sigma
 
     
-    def generate_sample(self, y, save_folder, time):
-        self.eval()
-        z = torch.randn(size=(self.latent_size,))
-        with torch.no_grad():
-            image_generated = self.decoder(self.fc_decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1)).view(-1, 512, 4, 4))
+#     def generate_sample(self, y, save_folder, time):
+#         self.eval()
+#         z = torch.randn(size=(self.latent_size,))
+#         with torch.no_grad():
+#             image_generated = self.decoder(self.fc_decoder(torch.cat([z.unsqueeze(0).to(self.device),y.unsqueeze(0).to(self.device)], dim=1)).view(-1, 512, 4, 4))
         
-        os.makedirs(save_folder, exist_ok=True)
+#         os.makedirs(save_folder, exist_ok=True)
 
-        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
-        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
+#         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+#         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+#         cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
 
-##### resnet custom
-class ResNet_Mix_VAE(VAutoEncoder):
-    def __init__(self, architecture_yaml, info_yaml):
+# ##### resnet custom
+# class ResNet_Mix_VAE(VAutoEncoder):
+#     def __init__(self, architecture_yaml, info_yaml):
 
-        self.latent_size = architecture_yaml['LATENT_SIZE']
-        self.img_channels=3 
-        self.cond_dim = self.latent_size
-        super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
-        self.fc_mu = nn.Linear(512, self.latent_size)
-        self.fc_log_var = nn.Linear(512, self.latent_size)
-        self.cond_latent = nn.Embedding(8, self.cond_dim).to(self.device)  # Embedding per le 8 classi condizionali
-        self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
+#         self.latent_size = architecture_yaml['LATENT_SIZE']
+#         self.img_channels=3 
+#         self.cond_dim = self.latent_size
+#         super().__init__(architecture_yaml, info_yaml)  # Proiezione della condizione
+#         self.fc_mu = nn.Linear(512, self.latent_size)
+#         self.fc_log_var = nn.Linear(512, self.latent_size)
+#         self.cond_latent = nn.Embedding(8, self.cond_dim).to(self.device)  # Embedding per le 8 classi condizionali
+#         self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
 
-    def build_encoder(self):
-        base_model = resnet18()
-        base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        return nn.Sequential(
-            nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-        )
+#     def build_encoder(self):
+#         base_model = resnet18()
+#         base_model.conv1=nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+#         return nn.Sequential(
+#             nn.Sequential(*list(base_model.children())[:-2]),  # Remove avgpool & fc
+#             nn.AdaptiveAvgPool2d((1, 1)),
+#             nn.Flatten(),
+#         )
 
-    def build_decoder(self):
-        class DecoderBlock(nn.Module):
-            def __init__(self, in_channels, out_channels):
-                super().__init__()
-                self.block = nn.Sequential(
-                    ResidualBlock(in_channels, in_channels),
-                    ResidualBlock(in_channels, in_channels),
-                    CBAM(in_channels),
-                    nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
-                    nn.BatchNorm2d(out_channels),
-                    nn.ReLU()
-                )
-            def forward(self, x):
-                return self.block(x)
+#     def build_decoder(self):
+#         class DecoderBlock(nn.Module):
+#             def __init__(self, in_channels, out_channels):
+#                 super().__init__()
+#                 self.block = nn.Sequential(
+#                     ResidualBlock(in_channels, in_channels),
+#                     ResidualBlock(in_channels, in_channels),
+#                     CBAM(in_channels),
+#                     nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
+#                     nn.BatchNorm2d(out_channels),
+#                     nn.ReLU()
+#                 )
+#             def forward(self, x):
+#                 return self.block(x)
 
-        model = nn.Sequential()
-        size = 4
-        prev = 512  # aumentato da 256 a 512
+#         model = nn.Sequential()
+#         size = 4
+#         prev = 512  # aumentato da 256 a 512
 
-        model.append(nn.Linear(self.latent_size + self.cond_dim, prev * size * size))
-        model.append(nn.ReLU())
-        model.append(nn.Unflatten(1, (prev, size, size)))
+#         model.append(nn.Linear(self.latent_size + self.cond_dim, prev * size * size))
+#         model.append(nn.ReLU())
+#         model.append(nn.Unflatten(1, (prev, size, size)))
 
-        decoder_blocks = [512, 256, 128, 64, 32]
-        for k in decoder_blocks:
-            model.append(DecoderBlock(prev, k))
-            prev = k
-            size *= 2
+#         decoder_blocks = [512, 256, 128, 64, 32]
+#         for k in decoder_blocks:
+#             model.append(DecoderBlock(prev, k))
+#             prev = k
+#             size *= 2
 
-        model.append(nn.Conv2d(prev, 3, kernel_size=3, stride=2, padding=1))
-        model.append(nn.Sigmoid())  # usa Tanh se normalizzi in [-1,1]
+#         model.append(nn.Conv2d(prev, 3, kernel_size=3, stride=2, padding=1))
+#         model.append(nn.Sigmoid())  # usa Tanh se normalizzi in [-1,1]
 
-        return model
+#         return model
         
 
-    def forward(self, x, y):
-        cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
-        h=torch.cat([x,cond], dim=1)       # l'outpur dell'encoder è 2*LATENT_SIZE
+#     def forward(self, x, y):
+#         cond = y.unsqueeze(2).unsqueeze(3).expand(-1, -1, 64, 64)
+#         h=torch.cat([x,cond], dim=1)       # l'outpur dell'encoder è 2*LATENT_SIZE
         
-        out = self.encoder(h)
-        mu = self.fc_mu(out)
-        log_sigma = self.fc_log_var(out)
+#         out = self.encoder(h)
+#         mu = self.fc_mu(out)
+#         log_sigma = self.fc_log_var(out)
         
-        eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
-        z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
+#         eps=torch.randn_like(mu)        # generazione del vettore latente secondo la normale
+#         z=eps*torch.exp(log_sigma)+mu       # generazione del vettore latente
         
-        integers = (y * self.powers).sum(dim=1).long()
-        y_decoder = self.cond_latent(integers)
-        # breakpoint()
-        z_decoder = torch.cat([z, y_decoder], dim=1)
-        out = self.decoder(z_decoder)
+#         integers = (y * self.powers).sum(dim=1).long()
+#         y_decoder = self.cond_latent(integers)
+#         # breakpoint()
+#         z_decoder = torch.cat([z, y_decoder], dim=1)
+#         out = self.decoder(z_decoder)
 
-        return out, mu, log_sigma
+#         return out, mu, log_sigma
     
-    def generate_sample(self, y, save_folder, time):
-        self.eval()
-        z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(self.device)
-        y = y.unsqueeze(0).to(self.device)
+#     def generate_sample(self, y, save_folder, time):
+#         self.eval()
+#         z = torch.randn(size=(self.latent_size,)).unsqueeze(0).to(self.device)
+#         y = y.unsqueeze(0).to(self.device)
         
-        integers = (y * self.powers).sum(dim=1).long()
-        y_decoder = self.cond_latent(integers)
-        with torch.no_grad():
-            image_generated = self.decoder(torch.cat([z,y_decoder], dim=1))
+#         integers = (y * self.powers).sum(dim=1).long()
+#         y_decoder = self.cond_latent(integers)
+#         with torch.no_grad():
+#             image_generated = self.decoder(torch.cat([z,y_decoder], dim=1))
         
-        os.makedirs(save_folder, exist_ok=True)
+#         os.makedirs(save_folder, exist_ok=True)
 
-        img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
-        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
+#         img = (image_generated.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
+#         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+#         cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)

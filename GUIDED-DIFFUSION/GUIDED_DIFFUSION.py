@@ -74,64 +74,69 @@ class UNetBlock(nn.Module):
           )
           return model
 
-class UNetBlock_film(nn.Module):
-    def __init__(self, size, time_encoding_size, outer_features, inner_features, cond_features, inner_block=None):
-        super().__init__()
-        self.time_encoding_size = time_encoding_size
-        self.size = size
-        self.outer_features = outer_features
-        self.inner_features = inner_features
-        self.cond_features = cond_features
-        self.encoder = self.build_encoder(outer_features, inner_features)
-        self.decoder = self.build_decoder(inner_features+self.time_encoding_size, outer_features)
-        self.combiner = self.build_combiner(2*outer_features, outer_features)
-        self.inner = inner_block
+# class UNetBlock_film(nn.Module):
+#     def __init__(self, size, time_encoding_size, outer_features, inner_features, cond_features, inner_block=None):
+#         super().__init__()
+#         self.time_encoding_size = time_encoding_size
+#         self.size = size
+#         self.outer_features = outer_features
+#         self.inner_features = inner_features
+#         self.cond_features = cond_features
+#         self.encoder = self.build_encoder(outer_features, inner_features)
+#         self.decoder = self.build_decoder(inner_features+self.time_encoding_size, outer_features)
+#         self.combiner = self.build_combiner(2*outer_features, outer_features)
+#         self.inner = inner_block
 
-    def forward(self, x, time_encodings, cond):
-        x0=x
-        y=self.encoder(x, cond)
-        if self.inner:
-            y=self.inner(y, time_encodings, cond)
-        half_size=self.size//2
-        tt=time_encodings.view(-1, self.time_encoding_size, 1, 1).expand(-1, -1, half_size, half_size).to(device=x.device)
-        y1=torch.cat((y,tt), dim=1)
-        x1=self.decoder(y1, cond)
-        x2=torch.cat((x1,x0), dim=1)
-        return self.combiner(x2)
+#     def forward(self, x, time_encodings, cond):
+#         x0=x
+#         y=self.encoder(x, cond)
+#         if self.inner:
+#             y=self.inner(y, time_encodings, cond)
+#         half_size=self.size//2
+#         tt=time_encodings.view(-1, self.time_encoding_size, 1, 1).expand(-1, -1, half_size, half_size).to(device=x.device)
+#         y1=torch.cat((y,tt), dim=1)
+#         x1=self.decoder(y1, cond)
+#         x2=torch.cat((x1,x0), dim=1)
+#         return self.combiner(x2)
 
-    def build_combiner(self, from_features, to_features):
-        return nn.Conv2d(from_features, to_features, 1)
+#     def build_combiner(self, from_features, to_features):
+#         return nn.Conv2d(from_features, to_features, 1)
 
-    def build_encoder(self, from_features, to_features):
-        return EncoderWithFilm(from_features=from_features, to_features=to_features, cond_features=self.cond_features)
+#     def build_encoder(self, from_features, to_features):
+#         return EncoderWithFilm(from_features=from_features, to_features=to_features, cond_features=self.cond_features)
 
-    def build_decoder(self, from_features, to_features):
-        return DecoderWithFiLM(from_features=from_features, to_features=to_features, cond_features=self.cond_features)
+#     def build_decoder(self, from_features, to_features):
+#         return DecoderWithFiLM(from_features=from_features, to_features=to_features, cond_features=self.cond_features)
 
 
 class Network(nn.Module):
     def __init__(self, architecture_yaml, train_yaml):
         super().__init__()
+
+        # Load YAML files
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.architecture_yaml=architecture_yaml
         self.train_yaml=train_yaml
 
         # Extract parameters from the YAML files
+        # trianing parameters
         self.num_epochs = self.train_yaml["TRAINING"]["NUM_EPOCHS"]
         self.L = self.train_yaml["TRAINING"]["L"]
         self.cond_shape = self.train_yaml["TRAINING"]["COND_SHAPE"]
         self.scheduleType = self.train_yaml["TRAINING"].get("SCHEDULE_TYPE", None)
-
+        # architecture parameters
         self.time_encodig_size = self.architecture_yaml["TIME_ENCODING_SIZE"]
         self.time_encoding=TimeEncoding(self.L, self.time_encodig_size)
         self.feat_list = self.architecture_yaml["FEAT_LIST"]
-
         self.unet_block_class_name = self.architecture_yaml["UNET_BLOCK"]
+
+        # Initialize UNet block class from the class name
         self.unet_block_class = globals().get(self.unet_block_class_name, None)
         if self.unet_block_class is None:
             print(f"[WARNING] UNET_BLOCK class '{class_name}' not found. Using default class '{UNetBlock.__name__}' instead.")
             self.unet_block_class = UNetBlock
 
+        # Initialize the network components
         self.pre=nn.Sequential(
             nn.Conv2d(3, self.feat_list[0], 3, padding='same'),
             nn.ReLU())
@@ -140,14 +145,16 @@ class Network(nn.Module):
             nn.ReLU(),
             nn.Conv2d(self.feat_list[0], 3, 3, padding='same'))
         
+        # Set utility parameters
         self.image_dimensions=(1,1,1)
 
+        # one-hot encoding for the conditioning and powers for the integer representation
         self.cond_one_hot=torch.eye(self.cond_shape[0], device=device)
         self.powers = 2 ** torch.arange(3 - 1, -1, -1).to(self.device)
         print("Network initialized correctly.")
 
+    # Set training parameters after the network is initialized
     def set_trining_parameters(self):
-        # training parameters
         self.noise_schedule=NoiseSchedule(self.L)
         self.loss_function=nn.MSELoss()
         lr = self.train_yaml["TRAINING"]["LR"]
@@ -161,7 +168,9 @@ class Network(nn.Module):
 
     
     def forward(self, x, t, cond):
+        # get the time encoding for the current step
         enc=self.time_encoding[t]
+        # forward pass through the network
         x=self.pre(x)
         y=self.unet(x, enc, cond)
         y=self.post(y)
@@ -255,13 +264,16 @@ class Network(nn.Module):
             # Compute latent image
             sqrt_alpha=self.noise_schedule.sqrt_alpha[t].view(-1, * self.image_dimensions)
             sqrt_1_alpha=self.noise_schedule.sqrt_1_alpha[t].view(-1, * self.image_dimensions)
+
+            # diffusion kernel
             zt=sqrt_alpha*x + sqrt_1_alpha*eps
 
             # Compute the output of the network (estimate of eps)
-            # and the loss
             g=self(zt,t,cond)
+            # Compute the loss
             loss=self.loss_function(g, eps)
 
+            # set the gradients to zero, backpropagate and update the parameters
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -272,45 +284,6 @@ class Network(nn.Module):
         if self.scheduleType is not None and self.scheduleType == "StepLR": # in case of step decay, step the scheduler after each epoch
             self.scheduler.step()
         return average_loss
-    
-    
-    # def generate_sample(self, y, save_folder, time, lam=1.5):
-    #     self.eval()
-    #     with torch.no_grad():
-    #         z=torch.randn(1, *(3,64,64), device=device)
-    #         inty = (y.to(device) * self.powers).sum(dim=0).long()
-    #         cond=self.cond_one_hot[inty]
-    #         cond0=torch.zeros_like(cond)
-    #         for kt in reversed(range(self.L)):
-    #             t=torch.tensor(kt).view(1)
-
-    #             # Prepare the coefficients to the right shape
-    #             beta=self.noise_schedule.beta[t].view(-1, *self.image_dimensions)
-    #             sqrt_1_alpha=self.noise_schedule.sqrt_1_alpha[t].view(-1, *self.image_dimensions)
-    #             sqrt_1_beta=self.noise_schedule.sqrt_1_beta[t].view(-1, *self.image_dimensions)
-    #             sqrt_beta=self.noise_schedule.sqrt_beta[t].view(-1, *self.image_dimensions)
-
-    #             # Estimate the error
-    #             g1 = self(z, t, cond)
-    #             g0 = self(z, t, cond0)
-    #             g = lam*g1 + (1-lam)*g0
-
-    #             # Compute mu
-    #             mu=(z-beta/sqrt_1_alpha*g)/sqrt_1_beta
-
-    #             # Generate and add the error
-    #             if kt>0:
-    #                 eps=torch.randn_like(z)
-    #                 z=mu+sqrt_beta*eps
-    #             else:
-    #                 z=mu
-
-    #     os.makedirs(save_folder, exist_ok=True)
-    #     img = (z.squeeze().permute(1, 2, 0).cpu().numpy() * 255).astype('uint8')
-    #     img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    #     cv2.imwrite(os.path.join(save_folder, f'generated_{time}.png'), img_bgr)
-    #     return z
-
 
     def generate_sample(self, y_batch, save_folders, lam=1.5):
         self.eval()

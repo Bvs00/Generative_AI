@@ -55,100 +55,100 @@ class TimeEncoding:
         return self.encoding[t]
 
 
-class FiLM(nn.Module):
-    def __init__(self, cond_dim, feat_dim):
-        super().__init__()
-        self.gamma = nn.Linear(cond_dim, feat_dim)
-        self.beta = nn.Linear(cond_dim, feat_dim)
+# class FiLM(nn.Module):
+#     def __init__(self, cond_dim, feat_dim):
+#         super().__init__()
+#         self.gamma = nn.Linear(cond_dim, feat_dim)
+#         self.beta = nn.Linear(cond_dim, feat_dim)
 
-    def forward(self, x, cond):
-        gamma = self.gamma(cond).unsqueeze(2).unsqueeze(3)
-        beta = self.beta(cond).unsqueeze(2).unsqueeze(3)
-        return gamma * x + beta
+#     def forward(self, x, cond):
+#         gamma = self.gamma(cond).unsqueeze(2).unsqueeze(3)
+#         beta = self.beta(cond).unsqueeze(2).unsqueeze(3)
+#         return gamma * x + beta
 
-# --- Residual Block ---
-class ResidualBlock(nn.Module):
-    def __init__(self, channels):
-        super().__init__()
-        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
-        self.norm1 = nn.GroupNorm(8, channels)
-        self.relu = nn.ReLU()
-        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
-        self.norm2 = nn.GroupNorm(8, channels)
+# # --- Residual Block ---
+# class ResidualBlock(nn.Module):
+#     def __init__(self, channels):
+#         super().__init__()
+#         self.conv1 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
+#         self.norm1 = nn.GroupNorm(8, channels)
+#         self.relu = nn.ReLU()
+#         self.conv2 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)
+#         self.norm2 = nn.GroupNorm(8, channels)
 
-    def forward(self, x):
-        residual = x
-        out = self.relu(self.norm1(self.conv1(x)))
-        out = self.norm2(self.conv2(out))
-        return self.relu(out + residual)
+#     def forward(self, x):
+#         residual = x
+#         out = self.relu(self.norm1(self.conv1(x)))
+#         out = self.norm2(self.conv2(out))
+#         return self.relu(out + residual)
 
-# --- Self-Attention Block ---
-class SelfAttention(nn.Module):
-    def __init__(self, channels, num_heads=4):
-        super().__init__()
-        self.norm = nn.LayerNorm(channels)
-        self.attn = nn.MultiheadAttention(embed_dim=channels, num_heads=num_heads, batch_first=True)
+# # --- Self-Attention Block ---
+# class SelfAttention(nn.Module):
+#     def __init__(self, channels, num_heads=4):
+#         super().__init__()
+#         self.norm = nn.LayerNorm(channels)
+#         self.attn = nn.MultiheadAttention(embed_dim=channels, num_heads=num_heads, batch_first=True)
 
-    def forward(self, x):
-        B, C, H, W = x.shape
-        x_flat = x.view(B, C, -1).permute(0, 2, 1)  # (B, HW, C)
-        x_norm = self.norm(x_flat)
-        out, _ = self.attn(x_norm, x_norm, x_norm)
-        out = out.permute(0, 2, 1).view(B, C, H, W)
-        return x + out  # Residual
+#     def forward(self, x):
+#         B, C, H, W = x.shape
+#         x_flat = x.view(B, C, -1).permute(0, 2, 1)  # (B, HW, C)
+#         x_norm = self.norm(x_flat)
+#         out, _ = self.attn(x_norm, x_norm, x_norm)
+#         out = out.permute(0, 2, 1).view(B, C, H, W)
+#         return x + out  # Residual
 
 
 
-class DecoderWithFiLM(nn.Module):
-    def __init__(self, from_features, to_features, cond_features):
-        super().__init__()
-        self.conv1=nn.Sequential(
-                nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
-                nn.BatchNorm2d(from_features),
-                nn.ReLU(),
-                CBAM(from_features),  # Attention module  
-            )
-        self.film = FiLM(cond_features, from_features)
-        self.conv2=nn.Sequential(
-            nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
-            nn.BatchNorm2d(from_features),
-            nn.ReLU(),
-            CBAM(from_features),  # Attention module                
-            nn.ConvTranspose2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(to_features),
-            nn.ReLU()
-            )
+# class DecoderWithFiLM(nn.Module):
+#     def __init__(self, from_features, to_features, cond_features):
+#         super().__init__()
+#         self.conv1=nn.Sequential(
+#                 nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
+#                 nn.BatchNorm2d(from_features),
+#                 nn.ReLU(),
+#                 CBAM(from_features),  # Attention module  
+#             )
+#         self.film = FiLM(cond_features, from_features)
+#         self.conv2=nn.Sequential(
+#             nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
+#             nn.BatchNorm2d(from_features),
+#             nn.ReLU(),
+#             CBAM(from_features),  # Attention module                
+#             nn.ConvTranspose2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
+#             nn.BatchNorm2d(to_features),
+#             nn.ReLU()
+#             )
 
-    def forward(self, x, cond):
-        x = self.conv1(x)
-        x = self.film(x, cond)
-        x = self.conv2(x)
-        return x
+#     def forward(self, x, cond):
+#         x = self.conv1(x)
+#         x = self.film(x, cond)
+#         x = self.conv2(x)
+#         return x
 
-# --- Encoder Module ---
-class EncoderWithFilm(nn.Module):
-    def __init__(self, from_features, to_features, cond_features):
-        super().__init__()
+# # --- Encoder Module ---
+# class EncoderWithFilm(nn.Module):
+#     def __init__(self, from_features, to_features, cond_features):
+#         super().__init__()
         
-        self.conv1=nn.Sequential(
-                nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
-                nn.BatchNorm2d(from_features),
-                nn.ReLU(),
-                CBAM(from_features),  # Attention module
-            )
-        self.film = FiLM(cond_features, from_features)
-        self.conv2=nn.Sequential(
-                nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
-                nn.BatchNorm2d(from_features),
-                nn.ReLU(),
-                CBAM(from_features),  # Attention module
-                nn.Conv2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
-                nn.BatchNorm2d(to_features),
-                nn.ReLU()
-            )
+#         self.conv1=nn.Sequential(
+#                 nn.Conv2d(from_features, from_features, 5, padding='same', bias=False),
+#                 nn.BatchNorm2d(from_features),
+#                 nn.ReLU(),
+#                 CBAM(from_features),  # Attention module
+#             )
+#         self.film = FiLM(cond_features, from_features)
+#         self.conv2=nn.Sequential(
+#                 nn.Conv2d(from_features, from_features, 3, padding='same', bias=False),
+#                 nn.BatchNorm2d(from_features),
+#                 nn.ReLU(),
+#                 CBAM(from_features),  # Attention module
+#                 nn.Conv2d(from_features, to_features, 4, stride=2, padding=1, bias=False),
+#                 nn.BatchNorm2d(to_features),
+#                 nn.ReLU()
+#             )
 
-    def forward(self, x, cond):
-        x = self.conv1(x)
-        x = self.film(x, cond)
-        x = self.conv2(x)
-        return x
+#     def forward(self, x, cond):
+#         x = self.conv1(x)
+#         x = self.film(x, cond)
+#         x = self.conv2(x)
+#         return x

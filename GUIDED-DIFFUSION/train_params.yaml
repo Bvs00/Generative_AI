@@ -2,9 +2,9 @@
 # f"{MODEL_NAME}_{LR}_{BATCH_SIZE}_{LATENT_SIZE}_{BETA}.pth"
 MODEL:
   TYPE: "DModel" # Model type
-  NAME: "UNet_advanced_new" # base name used to save the model
+  NAME: "baseline_up" # base name used to save the model
   CHECKPOINT_FOLDER: "./GUIDED-DIFFUSION/checkpoints"
-  ARCHITECTURE_YAML_NAME: UNet_advanced.yaml
+  ARCHITECTURE_YAML_NAME: baseline.yaml
   RESUME_FROM_CHECKPOINT: True
 
 TRAINING:
